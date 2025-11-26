@@ -1,0 +1,108 @@
+<div class="acerca-de-container">
+  <!-- Hero Section -->
+  <section class="hero-section">
+    <div class="hero-content">
+      <h1 class="hero-title">Acerca de Nosotros</h1>
+      <p class="hero-subtitle">Conoce la historia y la pasión detrás de Lucas Polla Barbería</p>
+    </div>
+  </section>
+
+  <!-- Historia Section -->
+  <section class="historia-section">
+    <div class="container">
+      <div class="historia-content">
+        <div class="historia-texto">
+          <h2 class="section-title">{{ historia.titulo }}</h2>
+          <div class="historia-parrafos">
+            <p *ngFor="let parrafo of historia.contenido.split('\n\n')" class="historia-parrafo">
+              {{ parrafo }}
+            </p>
+          </div>
+        </div>
+        
+        <div class="historia-imagen">
+          <div class="imagen-placeholder">
+            <div class="imagen-content">
+              <svg width="200" height="200" viewBox="0 0 200 200" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect width="200" height="200" fill="#f0f0f0"/>
+                <path d="M100 60C85.6406 60 74 71.6406 74 86C74 100.359 85.6406 112 100 112C114.359 112 126 100.359 126 86C126 71.6406 114.359 60 100 60Z" fill="#ccc"/>
+                <path d="M60 140C60 120.118 76.1172 104 96 104H104C123.883 104 140 120.118 140 140V160H60V140Z" fill="#ccc"/>
+                <text x="100" y="180" text-anchor="middle" fill="#999" font-size="14" font-family="Arial">Imagen de la Barbería</text>
+              </svg>
+              <p class="imagen-texto">Agrega una foto de tu barbería aquí</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Valores Section -->
+  <section class="valores-section">
+    <div class="container">
+      <h2 class="section-title">Nuestros Valores</h2>
+      <div class="valores-grid">
+        <div class="valor-card" *ngFor="let valor of historia.valores">
+          <div class="valor-icon">✨</div>
+          <h3 class="valor-titulo">{{ valor.titulo }}</h3>
+          <p class="valor-descripcion">{{ valor.descripcion }}</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Equipo Section -->
+  <section class="equipo-section">
+    <div class="container">
+      <h2 class="section-title">{{ equipo.titulo }}</h2>
+      <p class="section-description">{{ equipo.descripcion }}</p>
+      
+      <div class="equipo-grid">
+        <div class="equipo-card">
+          <div class="equipo-foto">
+            <div class="foto-placeholder">
+              <svg width="150" height="150" viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="75" cy="75" r="75" fill="#e0e0e0"/>
+                <circle cx="75" cy="55" r="20" fill="#ccc"/>
+                <path d="M45 110C45 90 60 75 75 75C90 75 105 90 105 110V115H45V110Z" fill="#ccc"/>
+              </svg>
+            </div>
+          </div>
+          <h3 class="equipo-nombre">Lucas Polla</h3>
+          <p class="equipo-rol">Fundador & Barbero Principal</p>
+          <p class="equipo-bio">Con más de 15 años de experiencia, Lucas combina técnicas tradicionales con estilos modernos.</p>
+        </div>
+        
+        <div class="equipo-card">
+          <div class="equipo-foto">
+            <div class="foto-placeholder">
+              <svg width="150" height="150" viewBox="0 0 150 150" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="75" cy="75" r="75" fill="#e0e0e0"/>
+                <circle cx="75" cy="55" r="20" fill="#ccc"/>
+                <path d="M45 110C45 90 60 75 75 75C90 75 105 90 105 110V115H45V110Z" fill="#ccc"/>
+              </svg>
+            </div>
+          </div>
+          <h3 class="equipo-nombre">Equipo Profesional</h3>
+          <p class="equipo-rol">Barberos Especializados</p>
+          <p class="equipo-bio">Nuestro equipo está formado por profesionales altamente capacitados y apasionados por su trabajo.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Contacto Section -->
+  <section class="contacto-section">
+    <div class="container">
+      <h2 class="section-title">¿Quieres Conocernos Mejor?</h2>
+      <p class="section-description">
+        Visítanos en nuestra barbería o contáctanos para más información. Estamos aquí para ayudarte.
+      </p>
+      <div class="contacto-buttons">
+        <a routerLink="/direccion" class="btn btn-primary">Ver Ubicación</a>
+        <a routerLink="/servicios" class="btn btn-outline-primary">Ver Servicios</a>
+        <a routerLink="/reserva" class="btn btn-outline-primary">Reservar Cita</a>
+      </div>
+    </div>
+  </section>
+</div>

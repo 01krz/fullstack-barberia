@@ -1,0 +1,271 @@
+/* Hero Section */
+.hero-section {
+  background: linear-gradient(135deg, var(--color3, #676374), var(--color2, #1f1728));
+  color: var(--color5, #fff);
+  padding: 5rem 2rem;
+  text-align: center;
+  border-bottom: 3px solid var(--color4, #676374);
+  position: relative;
+  overflow: hidden;
+}
+
+.hero-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: url('data:image/svg+xml,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><defs><pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse"><path d="M 100 0 L 0 0 0 100" fill="none" stroke="rgba(255,255,255,0.05)" stroke-width="1"/></pattern></defs><rect width="100%" height="100%" fill="url(%23grid)"/></svg>');
+  opacity: 0.3;
+}
+
+.hero-content {
+  position: relative;
+  z-index: 1;
+}
+
+.hero-title {
+  font-size: 3.5rem;
+  font-weight: 700;
+  margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+  color: var(--color5, #fff);
+}
+
+.hero-subtitle {
+  font-size: 1.5rem;
+  margin-bottom: 2rem;
+  opacity: 0.95;
+}
+
+/* Container */
+.container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 0 2rem;
+}
+
+/* Métricas Section */
+.metricas-section {
+  padding: 4rem 0;
+  background-color: var(--color5, #fff);
+}
+
+/* Filters Section */
+.filters-section {
+  margin-bottom: 3rem;
+}
+
+.filters-card {
+  background: linear-gradient(135deg, rgba(103, 99, 116, 0.1), rgba(31, 23, 40, 0.1));
+  border-radius: 15px;
+  padding: 2rem;
+  border-left: 4px solid var(--color3, #676374);
+}
+
+.filters-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color1, #333);
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.filters-title i {
+  color: var(--color3, #676374);
+}
+
+.filters-description {
+  color: var(--color3, #666);
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Métricas Grid */
+.metricas-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+  gap: 2rem;
+  margin-bottom: 3rem;
+}
+
+.metrica-card {
+  background: var(--color5, #fff);
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+  border: 2px solid transparent;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.metrica-card:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+  border-color: var(--color3, #676374);
+}
+
+.metrica-header {
+  background: linear-gradient(135deg, var(--color3, #676374), var(--color2, #1f1728));
+  color: var(--color5, #fff);
+  padding: 1.5rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.metrica-icon {
+  font-size: 2rem;
+  color: var(--color5, #fff);
+}
+
+.metrica-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color5, #fff);
+}
+
+.metrica-body {
+  padding: 2rem;
+  flex-grow: 1;
+  min-height: 250px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.metrica-placeholder {
+  text-align: center;
+  color: var(--color3, #666);
+  width: 100%;
+}
+
+.metrica-placeholder i {
+  font-size: 4rem;
+  color: var(--color3, #676374);
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.metrica-placeholder p {
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: var(--color1, #333);
+  font-weight: 500;
+}
+
+.metrica-placeholder small {
+  font-size: 0.9rem;
+  color: var(--color3, #666);
+  opacity: 0.8;
+}
+
+/* Consultas Section */
+.consultas-section {
+  margin-top: 3rem;
+}
+
+.consultas-card {
+  background: var(--color5, #fff);
+  border-radius: 15px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  border: 2px solid var(--color3, #676374);
+  overflow: hidden;
+}
+
+.consultas-header {
+  background: linear-gradient(135deg, var(--color3, #676374), var(--color2, #1f1728));
+  color: var(--color5, #fff);
+  padding: 2rem;
+}
+
+.section-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color5, #fff);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.section-title i {
+  font-size: 2rem;
+}
+
+.consultas-body {
+  padding: 2rem;
+}
+
+.consultas-description {
+  color: var(--color3, #666);
+  font-size: 1.1rem;
+  line-height: 1.8;
+  margin-bottom: 2rem;
+}
+
+.consultas-placeholder {
+  background: linear-gradient(135deg, rgba(103, 99, 116, 0.05), rgba(31, 23, 40, 0.05));
+  border-radius: 10px;
+  padding: 3rem 2rem;
+  text-align: center;
+  border: 2px dashed var(--color3, #676374);
+  min-height: 200px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.consultas-placeholder i {
+  font-size: 4rem;
+  color: var(--color3, #676374);
+  margin-bottom: 1rem;
+  opacity: 0.5;
+}
+
+.consultas-placeholder p {
+  font-size: 1.2rem;
+  margin-bottom: 0.5rem;
+  color: var(--color1, #333);
+  font-weight: 500;
+}
+
+.consultas-placeholder small {
+  font-size: 0.9rem;
+  color: var(--color3, #666);
+  opacity: 0.8;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .hero-title {
+    font-size: 2.5rem;
+  }
+
+  .hero-subtitle {
+    font-size: 1.2rem;
+  }
+
+  .metricas-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .container {
+    padding: 0 1rem;
+  }
+
+  .section-title {
+    font-size: 1.5rem;
+  }
+
+  .section-title i {
+    font-size: 1.5rem;
+  }
+}
+

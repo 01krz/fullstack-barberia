@@ -1,0 +1,153 @@
+
+<!-- Hero Section -->
+<section class="hero-section">
+  <div class="container">
+    <h1 class="hero-title">Lucas Polla Barbería</h1>
+    <p class="hero-subtitle">Estilo, tradición y excelencia en cada corte</p>
+    <div class="hero-buttons">
+      <a routerLink="/servicios" class="btn btn-primary btn-lg">Ver Servicios</a>
+      <a routerLink="/reserva" class="btn btn-outline-light btn-lg">Reservar Ahora</a>
+    </div>
+  </div>
+</section>
+
+<!-- Promociones Section -->
+<section class="promociones-section" *ngIf="promociones.length > 0">
+  <div class="container">
+    <h2 class="section-title">
+      <i class="bi bi-tag-fill"></i> Promociones Especiales
+    </h2>
+    <p class="section-description">
+      Aprovecha nuestras ofertas especiales y obtén descuentos exclusivos en servicios y productos.
+    </p>
+    <div class="promociones-grid">
+      <div class="promocion-card" *ngFor="let promocion of promociones">
+        <div class="promocion-badge">
+          <i class="bi bi-percent"></i> {{ promocion.porcentajeDescuento }}% OFF
+        </div>
+        <div class="promocion-content">
+          <ng-container *ngIf="obtenerServicioPorPromocion(promocion) as servicio">
+            <h3 class="promocion-title">
+              <ng-container *ngIf="obtenerProductoPorPromocion(promocion) as producto">
+                {{ servicio.nombre }} + {{ producto.nombre }}
+              </ng-container>
+              <ng-container *ngIf="!obtenerProductoPorPromocion(promocion)">
+                {{ servicio.nombre }}
+              </ng-container>
+            </h3>
+            <p class="promocion-text">
+              <ng-container *ngIf="obtenerProductoPorPromocion(promocion) as producto">
+                Llevando <strong>{{ servicio.nombre }}</strong> + <strong>{{ producto.nombre }}</strong> 
+                obtienes un <strong>{{ promocion.porcentajeDescuento }}% de descuento</strong> en el total.
+              </ng-container>
+              <ng-container *ngIf="!obtenerProductoPorPromocion(promocion)">
+                Reservando <strong>{{ servicio.nombre }}</strong> obtienes un 
+                <strong>{{ promocion.porcentajeDescuento }}% de descuento</strong>.
+              </ng-container>
+            </p>
+            <p class="promocion-text">
+              <i class="bi bi-calendar-event"></i>
+              Válido hasta: {{ promocion.fechaFin | date:'short' }}
+            </p>
+          </ng-container>
+          <a routerLink="/servicios" class="btn btn-primary">Ver Detalles</a>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- Resumen de Secciones -->
+<section class="resumen-section">
+  <div class="container">
+    <h2 class="section-title">Bienvenido a Nuestra Barbería</h2>
+    <p class="section-description">
+      Explora nuestros servicios, conoce nuestra historia y descubre por qué somos la mejor opción para tu cuidado personal.
+    </p>
+
+    <!-- Tarjetas de Secciones -->
+    <div class="secciones-grid">
+      <!-- Servicios -->
+      <div class="seccion-card">
+        <div class="seccion-icon">✂️</div>
+        <h3 class="seccion-title">Servicios</h3>
+        <p class="seccion-description">
+          Descubre nuestra amplia gama de servicios profesionales. Desde cortes modernos hasta tratamientos especializados.
+        </p>
+        <div class="seccion-preview" *ngIf="serviciosDestacados.length > 0">
+          <p class="preview-title"><strong>Servicios destacados:</strong></p>
+          <ul class="preview-list">
+            <li *ngFor="let servicio of serviciosDestacados">
+              {{ servicio.nombre }} - ${{ servicio.precio | number }}
+            </li>
+          </ul>
+        </div>
+        <a routerLink="/servicios" class="btn btn-primary">Ver Todos los Servicios</a>
+      </div>
+
+      <!-- Galería -->
+      <div class="seccion-card">
+        <div class="seccion-icon">📸</div>
+        <h3 class="seccion-title">Galería</h3>
+        <p class="seccion-description">
+          Visita nuestra galería y admira los trabajos realizados. Cada corte es una obra de arte.
+        </p>
+        <a routerLink="/galeria" class="btn btn-primary">Ver Galería</a>
+      </div>
+
+      <!-- Reseñas -->
+      <div class="seccion-card">
+        <div class="seccion-icon">⭐</div>
+        <h3 class="seccion-title">Reseñas</h3>
+        <p class="seccion-description">
+          Lee las opiniones de nuestros clientes satisfechos. Tu experiencia es nuestra prioridad.
+        </p>
+        <a routerLink="/resenas" class="btn btn-primary">Ver Reseñas</a>
+      </div>
+
+      <!-- Acerca de -->
+      <div class="seccion-card">
+        <div class="seccion-icon">📖</div>
+        <h3 class="seccion-title">Nuestra Historia</h3>
+        <p class="seccion-description">
+          Conoce la historia de nuestra barbería, nuestra pasión por el oficio y nuestro compromiso con la excelencia.
+        </p>
+        <a routerLink="/acerca-de" class="btn btn-primary">Conocer Más</a>
+      </div>
+
+      <!-- Ubicación -->
+      <div class="seccion-card">
+        <div class="seccion-icon">📍</div>
+        <h3 class="seccion-title">Ubicación</h3>
+        <p class="seccion-description">
+          Encuéntranos fácilmente. Visita nuestra ubicación y conoce nuestras instalaciones.
+        </p>
+        <a routerLink="/direccion" class="btn btn-primary">Ver Ubicación</a>
+      </div>
+
+      <!-- Reservas -->
+      <div class="seccion-card destacado">
+        <div class="seccion-icon">📅</div>
+        <h3 class="seccion-title">Reserva tu Cita</h3>
+        <p class="seccion-description">
+          Agenda tu cita de forma fácil y rápida. Selecciona el servicio, barbero y horario que prefieras.
+        </p>
+        <a routerLink="/reserva" class="btn btn-primary btn-lg">Reservar Ahora</a>
+      </div>
+    </div>
+
+    <!-- Información Adicional -->
+    <div class="info-extra">
+      <div class="info-card">
+        <h4>Horarios de Atención</h4>
+        <p><strong>Lunes a Sábado:</strong> 9:00 AM - 8:00 PM</p>
+        <p><strong>Domingo:</strong> Cerrado</p>
+      </div>
+      <div class="info-card">
+        <h4>¿Necesitas Ayuda?</h4>
+        <p>Contáctanos para más información sobre nuestros servicios o para resolver cualquier duda.</p>
+        <a routerLink="/acerca-de" class="btn btn-outline-primary">Contacto</a>
+      </div>
+    </div>
+  </div>
+</section>

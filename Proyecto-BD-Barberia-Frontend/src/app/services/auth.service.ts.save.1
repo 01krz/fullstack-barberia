@@ -1,0 +1,118 @@
+OOBOimport { Injectable } from '@angular/core';
+import { BehaviorSubject, Observable } from 'rxjs';
+import { User, UserRole, LoginCredentials } from '../models/user.model';
+import { Router } from '@angular/router';
+
+@Injectable({
+  providedIn: 'root'
+})
+export class AuthService {
+  private currentUserSubject = new BehaviorSubject<User | null>(null);
+  public currentUser$ = this.currentUserSubject.asObservable();
+
+  // Simulación de base de datos (luego se conectará a una BD real)
+  private users: User[] = [
+    {
+      id: 1,
+      email: 'admin@barberia.com',
+      password: 'admin123',
+      nombre: 'Administrador',
+      rol: UserRole.ADMIN
+    },
+    {
+      id: 2,
+      email: 'barbero@barberia.com',
+      password: 'barbero123',
+      nombre: 'Juan Barbero',
+      rol: UserRole.BARBERO
+    },
+    {
+      id: 3,
+      email: 'usuario@barberia.com',
+      password: 'usuario123',
+      nombre: 'Pedro Usuario',
+      rol: UserRole.USUARIO
+    }
+  ];
+
+  constructor(private router: Router) {
+    // Verificar si hay un usuario guardado en localStorage
+    const savedUser = localStorage.getItem('currentUser');
+    if (savedUser) {
+      this.currentUserSubject.next(JSON.parse(savedUser));
+    }
+  }
+
+  login(credentials: LoginCredentials): Observable<boolean> {
+    return new Observable(observer => {
+      const user = this.users.find(
+        u => u.email === credentials.email && u.password === credentials.password
+      );
+
+      if (user) {
+        // Eliminar password antes de guardar
+        const { password, ...userWithoutPassword } = user;
+        localStorage.setItem('currentUser', JSON.stringify(userWithoutPassword));
+        this.currentUserSubject.next(userWithoutPassword as User);
+        observer.next(true);
+      } else {
+        observer.next(false);
+      }
+      observer.complete();
+    });
+  }
+
+  loginAsGuest(): void {
+    const guestUser: User = {
+      id: 0,
+      email: 'invitado@barberia.com',
+      password: '',
+      nombre: 'Invitado',
+      rol: UserRole.INVITADO
+    };
+    localStorage.setItem('currentUser', JSON.stringify(guestUser));
+    this.currentUserSubject.next(guestUser);
+    this.router.navigate(['/home']);
+  }
+
+  logout(): void {
+    localStorage.removeItem('currentUser');
+    this.currentUserSubject.next(null);
+    this.router.navigate(['/login']);
+  }
+
+  getCurrentUser(): User | null {
+    return this.currentUserSubject.value;
+  }
+
+  isAuthenticated(): boolean {
+    return this.currentUserSubject.value !== null;
+  }
+
+  hasRole(role: UserRole): boolean {
+    const user = this.currentUserSubject.value;
+    return user?.rol === role;
+  }
+
+  isAdmin(): boolean {
+    return this.hasRole(UserRole.ADMIN);
+  }
+
+  isBarbero(): boolean {
+    return this.hasRole(UserRole.BARBERO);
+  }
+
+  isUsuario(): boolean {
+    return this.hasRole(UserRole.USUARIO);
+  }
+
+  isInvitado(): boolean {
+    return this.hasRole(UserRole.INVITADO);
+  }
+
+  canReserve(): boolean {
+    const user = this.currentUserSubject.value;
+    return user?.rol === UserRole.USUARIO;
+  }
+}
+

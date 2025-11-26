@@ -1,0 +1,78 @@
+<div class="login-container">
+  <div class="login-card">
+    <h2 class="login-title">Iniciar Sesión</h2>
+    
+    <form (ngSubmit)="onSubmit()" #loginForm="ngForm">
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input 
+          type="email" 
+          class="form-control" 
+          id="email"
+          [(ngModel)]="credentials.email"
+          name="email"
+          required
+          placeholder="tu@email.com">
+      </div>
+      
+      <div class="mb-3">
+        <label for="password" class="form-label">Contraseña</label>
+        <input 
+          type="password" 
+          class="form-control" 
+          id="password"
+          [(ngModel)]="credentials.password"
+          name="password"
+          required
+          placeholder="••••••••">
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+        {{ errorMessage }}
+        <div *ngIf="errorMessage.includes('¿No tienes una cuenta?')" class="mt-2">
+          <button type="button" class="btn btn-link p-0 text-decoration-underline" (click)="irARegistro()">
+            Crear una cuenta nueva
+          </button>
+        </div>
+      </div>
+
+      <button 
+        type="submit" 
+        class="btn btn-primary w-100 mb-3"
+        [disabled]="isLoading || !loginForm.valid">
+        <span *ngIf="!isLoading">Iniciar Sesión</span>
+        <span *ngIf="isLoading">Cargando...</span>
+      </button>
+    </form>
+
+    <div class="divider">
+      <span>o</span>
+    </div>
+
+    <button 
+      type="button" 
+      class="btn btn-secondary w-100 mb-3"
+      (click)="loginAsGuest()">
+      Entrar como Invitado
+    </button>
+
+    <div class="text-center">
+      <p class="mb-0">¿No tienes una cuenta?</p>
+      <button 
+        type="button" 
+        class="btn btn-link p-0"
+        (click)="irARegistro()">
+        Regístrate aquí
+      </button>
+    </div>
+
+    <div class="login-info mt-4">
+      <p class="text-center mb-2"><small>Credenciales de prueba:</small></p>
+      <div class="credentials">
+        <small><strong>Admin:</strong> adminbarberia.com / admin123</small><br>
+        <small><strong>Barbero:</strong> barberobarberia.com / barbero123</small><br>
+        <small><strong>Usuario:</strong> usuariobarberia.com / usuario123</small>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,117 @@
+<!-- Hero Section -->
+<section class="hero-section">
+  <div class="container">
+    <div class="hero-content">
+      <h1 class="hero-title">Galería de Imágenes</h1>
+      <p class="hero-subtitle">Descubre nuestros trabajos y el talento de nuestros barberos</p>
+      <div class="hero-actions" *ngIf="isUserAdmin">
+        <button 
+          class="btn btn-outline-light btn-lg"
+          (click)="toggleUploadForm()">
+          <i class="bi bi-cloud-upload"></i> {{ showUploadForm ? 'Cancelar' : 'Subir Imagen' }}
+        </button>
+      </div>
+    </div>
+  </div>
+</section>
+
+<div class="galeria-container">
+
+  <!-- Formulario de subida para admin -->
+  <div *ngIf="isUserAdmin && showUploadForm" class="upload-form-container">
+    <div class="upload-form">
+      <h3>Subir Nueva Imagen</h3>
+      
+      <div class="form-group">
+        <label for="imageInput">Seleccionar Imagen</label>
+        <input 
+          type="file" 
+          id="imageInput"
+          class="form-control" 
+          accept="image/*"
+          (change)="onFileSelected($event)">
+        <small class="form-text text-muted">Formatos permitidos: JPG, PNG, GIF, WEBP. Tamaño máximo: 5MB</small>
+      </div>
+
+      <!-- Vista previa de la imagen -->
+      <div *ngIf="imagePreview" class="image-preview-container">
+        <label>Vista Previa:</label>
+        <div class="image-preview">
+          <img [src]="imagePreview" alt="Vista previa">
+          <button 
+            type="button"
+            class="btn-remove-preview"
+            (click)="removePreview()"
+            title="Quitar imagen">
+            <i class="bi bi-x-circle"></i>
+          </button>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label for="imageTitle">Título (opcional)</label>
+        <input 
+          type="text" 
+          id="imageTitle"
+          class="form-control" 
+          [(ngModel)]="imageTitle"
+          placeholder="Título de la imagen">
+      </div>
+
+      <div class="form-group">
+        <label for="imageDescription">Descripción (opcional)</label>
+        <textarea 
+          id="imageDescription"
+          class="form-control" 
+          rows="3"
+          [(ngModel)]="imageDescription"
+          placeholder="Descripción de la imagen"></textarea>
+      </div>
+
+      <div *ngIf="uploadError" class="alert alert-danger">
+        {{ uploadError }}
+      </div>
+
+      <div *ngIf="uploadSuccess" class="alert alert-success">
+        ¡Imagen subida exitosamente!
+      </div>
+
+      <button 
+        class="btn btn-success" 
+        (click)="uploadImage()"
+        [disabled]="!selectedFile">
+        Subir Imagen
+      </button>
+    </div>
+  </div>
+
+  <!-- Mensaje cuando no hay imágenes -->
+  <div *ngIf="images.length === 0" class="no-images-message">
+    <p>No hay imágenes en la galería aún.</p>
+    <p *ngIf="isUserAdmin" class="text-muted">¡Sube la primera imagen para comenzar!</p>
+  </div>
+
+  <!-- Collage de imágenes -->
+  <div *ngIf="images.length > 0" class="gallery-grid">
+    <div 
+      *ngFor="let image of images" 
+      class="gallery-item"
+      [class.admin-view]="isUserAdmin">
+      <div class="image-wrapper">
+        <img [src]="image.url" [alt]="image.title || 'Imagen de galería'">
+        <div *ngIf="isUserAdmin" class="admin-actions">
+          <button 
+            class="btn btn-sm btn-danger"
+            (click)="deleteImage(image.id)"
+            title="Eliminar imagen">
+            <i class="bi bi-trash"></i>
+          </button>
+        </div>
+      </div>
+      <div *ngIf="image.title || image.description" class="image-info">
+        <h5 *ngIf="image.title">{{ image.title }}</h5>
+        <p *ngIf="image.description">{{ image.description }}</p>
+      </div>
+    </div>
+  </div>
+</div>

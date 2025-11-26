@@ -1,0 +1,250 @@
+<div class="container mt-4">
+  <div class="row justify-content-center">
+    <div class="col-12">
+      <div class="card">
+        <div class="card-header">
+          <h2 class="mb-0">Reservar Cita</h2>
+        </div>
+        <div class="card-body">
+          <form [formGroup]="reservaForm" (ngSubmit)="onSubmit()">
+            
+            <!-- Servicio y Barbero -->
+            <div class="row mb-4">
+              <div class="col-md-6">
+                <label for="servicio" class="form-label">Servicio <span class="text-danger">*</span></label>
+                <select 
+                  class="form-select" 
+                  id="servicio" 
+                  formControlName="servicio"
+                  [class.is-invalid]="servicio?.invalid && servicio?.touched"
+                  [disabled]="promocionPreseleccionada">
+                  <option value="">Seleccione un servicio</option>
+                  <option *ngFor="let serv of servicios" [value]="serv.nombre">
+                    {{ serv.nombre }} - ${{ serv.precio | number }} ({{ serv.duracion }} min)
+                  </option>
+                </select>
+                <div class="invalid-feedback" *ngIf="servicio?.invalid && servicio?.touched">
+                  Por favor seleccione un servicio
+                </div>
+                <small class="text-muted" *ngIf="promocionPreseleccionada">
+                  <i class="bi bi-info-circle"></i> Servicio preseleccionado por la promoción
+                </small>
+              </div>
+
+              <div class="col-md-6">
+                <label for="barbero" class="form-label">Barbero <span class="text-danger">*</span></label>
+                <select 
+                  class="form-select" 
+                  id="barbero" 
+                  formControlName="barbero"
+                  [class.is-invalid]="barbero?.invalid && barbero?.touched"
+                  (change)="onBarberoChange()">
+                  <option value="">Seleccione un barbero</option>
+                  <option *ngFor="let barbero of barberos" [value]="barbero.nombre">
+                    {{ barbero.nombre }}
+                  </option>
+                </select>
+                <div class="invalid-feedback" *ngIf="barbero?.invalid && barbero?.touched">
+                  Por favor seleccione un barbero
+                </div>
+              </div>
+            </div>
+
+            <!-- Calendario Semanal -->
+            <div class="calendario-container mb-4">
+              <div class="calendario-header">
+                <button 
+                  type="button" 
+                  class="btn btn-sm btn-outline-secondary"
+                  (click)="semanaAnterior()"
+                  [disabled]="!puedeNavegarAtras()">
+                  ← Semana Anterior
+                </button>
+                <h4 class="mb-0">
+                  {{ obtenerRangoSemana() }}
+                </h4>
+                <button 
+                  type="button" 
+                  class="btn btn-sm btn-outline-secondary"
+                  (click)="semanaSiguiente()">
+                  Semana Siguiente →
+                </button>
+              </div>
+
+              <div class="calendario-grid">
+                <!-- Encabezados de días -->
+                <div class="calendario-header-row">
+                  <div class="hora-header"></div>
+                  <div class="dia-header" *ngFor="let dia of semanaActual">
+                    <div class="dia-nombre">{{ dia.diaNombre }}</div>
+                    <div class="dia-fecha">{{ dia.diaNumero }} {{ dia.mes }}</div>
+                  </div>
+                </div>
+
+                <!-- Filas de horas -->
+                <div class="calendario-fila" *ngFor="let hora of horarios">
+                  <div class="hora-label">{{ hora }}</div>
+                  <div 
+                    class="slot-hora" 
+                    *ngFor="let dia of semanaActual"
+                    [class.disponible]="esDisponible(dia.fechaISO, hora)"
+                    [class.no-disponible]="!esDisponible(dia.fechaISO, hora)"
+                    [class.seleccionado]="estaSeleccionado(dia.fechaISO, hora)"
+                    (click)="seleccionarSlot(dia.fechaISO, hora)"
+                    [title]="esDisponible(dia.fechaISO, hora) ? 'Disponible - Click para seleccionar' : 'No disponible'">
+                    <span *ngIf="estaSeleccionado(dia.fechaISO, hora)" class="check-icon">✓</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Leyenda -->
+              <div class="calendario-leyenda mt-3">
+                <div class="leyenda-item">
+                  <div class="leyenda-color disponible"></div>
+                  <span>Disponible</span>
+                </div>
+                <div class="leyenda-item">
+                  <div class="leyenda-color no-disponible"></div>
+                  <span>No disponible</span>
+                </div>
+                <div class="leyenda-item">
+                  <div class="leyenda-color seleccionado"></div>
+                  <span>Seleccionado</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Campos ocultos para fecha y hora (se llenan automáticamente) -->
+            <input type="hidden" formControlName="fecha">
+            <input type="hidden" formControlName="hora">
+
+            <!-- Mensaje de selección -->
+            <div class="alert alert-info" *ngIf="fechaSeleccionada && horaSeleccionada">
+              <strong>Seleccionado:</strong> 
+              {{ formatearFechaSeleccionada() }} 
+              a las {{ horaSeleccionada }}
+            </div>
+
+            <div class="alert alert-warning" *ngIf="!fechaSeleccionada || !horaSeleccionada">
+              Por favor seleccione una fecha y hora disponible en el calendario
+            </div>
+
+            <!-- Productos -->
+            <div class="mb-4" *ngIf="productos.length > 0">
+              <h5 class="mb-3">Productos Disponibles (opcional)</h5>
+              <div *ngIf="promocionPreseleccionada && promocionAplicable?.productoId" class="alert alert-info mb-3">
+                <i class="bi bi-info-circle"></i> 
+                <strong>Producto incluido en la promoción:</strong> 
+                El producto asociado a esta promoción ha sido preseleccionado automáticamente.
+              </div>
+              <p class="text-muted small mb-3" *ngIf="!promocionPreseleccionada || !promocionAplicable?.productoId">
+                Seleccione los productos que desea agregar a su reserva
+              </p>
+              <div class="row g-3">
+                <div class="col-md-6 col-lg-4" *ngFor="let producto of productos">
+                  <div class="card producto-card" 
+                       [class.producto-seleccionado]="estaProductoSeleccionado(producto.id)"
+                       [class.disabled]="promocionPreseleccionada && promocionAplicable?.productoId && producto.id !== promocionAplicable?.productoId"
+                       (click)="!promocionPreseleccionada || !promocionAplicable?.productoId || producto.id === promocionAplicable?.productoId ? toggleProducto(producto.id) : null">
+                    <div class="card-body">
+                      <div class="form-check">
+                        <input 
+                          class="form-check-input" 
+                          type="checkbox" 
+                          [checked]="estaProductoSeleccionado(producto.id)"
+                          [disabled]="promocionPreseleccionada && promocionAplicable?.productoId && producto.id !== promocionAplicable?.productoId"
+                          (click)="$event.stopPropagation()"
+                          (change)="toggleProducto(producto.id)"
+                          [id]="'producto-' + producto.id">
+                        <label class="form-check-label" [for]="'producto-' + producto.id">
+                          <strong>{{ producto.nombre }}</strong>
+                          <span *ngIf="promocionPreseleccionada && promocionAplicable?.productoId === producto.id" class="badge bg-success ms-2">
+                            Incluido en promoción
+                          </span>
+                        </label>
+                      </div>
+                      <p class="card-text small text-muted mb-2">{{ producto.descripcion }}</p>
+                      <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge bg-secondary">Stock: {{ producto.stock }}</span>
+                        <span class="fw-bold text-primary">${{ producto.precio | number }}</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              
+              <div class="mt-3" *ngIf="calcularTotalProductos() > 0">
+                <div class="alert alert-info">
+                  <strong>Subtotal productos:</strong> ${{ calcularTotalProductos() | number }}
+                </div>
+              </div>
+            </div>
+
+            <!-- Resumen de totales -->
+            <div class="mb-4" *ngIf="reservaForm.get('servicio')?.value">
+              <div class="card">
+                <div class="card-header bg-primary text-white">
+                  <h5 class="mb-0">Resumen de la Reserva</h5>
+                </div>
+                <div class="card-body">
+                  <div *ngIf="promocionAplicable" class="alert alert-success mb-3">
+                    <i class="bi bi-gift-fill"></i> 
+                    <strong>¡Promoción aplicada automáticamente!</strong> 
+                    <br>
+                    <small>
+                      Has seleccionado el servicio y producto de la promoción. 
+                      Descuento del <strong>{{ promocionAplicable.porcentajeDescuento }}%</strong> aplicado al total.
+                    </small>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2">
+                    <span>Servicio:</span>
+                    <strong>${{ obtenerPrecioServicio() | number }}</strong>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2" *ngIf="calcularTotalProductos() > 0">
+                    <span>Productos:</span>
+                    <strong>${{ calcularTotalProductos() | number }}</strong>
+                  </div>
+                  <div class="d-flex justify-content-between mb-2" *ngIf="calcularDescuento() > 0">
+                    <span class="text-success">Descuento ({{ promocionAplicable?.porcentajeDescuento }}%):</span>
+                    <strong class="text-success">-${{ calcularDescuento() | number }}</strong>
+                  </div>
+                  <hr>
+                  <div class="d-flex justify-content-between">
+                    <span class="fs-5 fw-bold">TOTAL:</span>
+                    <span class="fs-5 fw-bold text-primary">${{ calcularTotal() | number }}</span>
+                  </div>
+                  <div *ngIf="calcularDescuento() > 0" class="mt-2">
+                    <small class="text-muted">
+                      <s>${{ (obtenerPrecioServicio() + calcularTotalProductos()) | number }}</s>
+                    </small>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Notas -->
+            <div class="mb-3">
+              <label for="notas" class="form-label">Notas adicionales (opcional)</label>
+              <textarea 
+                class="form-control" 
+                id="notas" 
+                formControlName="notas"
+                rows="3"
+                placeholder="Escriba aquí cualquier solicitud especial o nota adicional..."></textarea>
+            </div>
+
+            <!-- Botones -->
+            <div class="d-flex gap-2 justify-content-end">
+              <button type="button" class="btn btn-secondary" (click)="cancelar()">
+                Cancelar
+              </button>
+              <button type="submit" class="btn btn-primary" [disabled]="reservaForm.invalid">
+                Confirmar Reserva
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

@@ -1,0 +1,135 @@
+<div class="registro-container">
+  <div class="registro-card">
+    <h2 class="registro-title">Crear Cuenta</h2>
+    <p class="registro-subtitle">Regístrate para poder realizar reservas</p>
+    
+    <form (ngSubmit)="onSubmit()" #registroForm="ngForm">
+      <div class="mb-3">
+        <label for="nombre" class="form-label">Nombre Completo</label>
+        <input 
+          type="text" 
+          class="form-control" 
+          id="nombre"
+          [(ngModel)]="nombre"
+          name="nombre"
+          required
+          placeholder="Juan Pérez">
+      </div>
+      
+      <div class="mb-3">
+        <label for="email" class="form-label">Email</label>
+        <input 
+          type="email" 
+          class="form-control" 
+          [class.is-invalid]="emailEnUso"
+          [class.is-valid]="email && !emailEnUso && !verificandoEmail"
+          id="email"
+          [(ngModel)]="email"
+          name="email"
+          (blur)="verificarEmail()"
+          (input)="emailEnUso = false"
+          required
+          placeholder="tu&#64;email.com">
+        <div *ngIf="verificandoEmail" class="form-text text-muted">
+          <small>Verificando disponibilidad...</small>
+        </div>
+        <div *ngIf="emailEnUso && !verificandoEmail" class="invalid-feedback">
+          Este correo electrónico ya está en uso. Por favor, use otro o <a routerLink="/login" class="text-decoration-underline">inicie sesión</a>.
+        </div>
+        <div *ngIf="email && !emailEnUso && !verificandoEmail" class="valid-feedback">
+          ✓ Correo electrónico disponible
+        </div>
+      </div>
+      
+      <div class="mb-3">
+        <label for="password" class="form-label">Contraseña</label>
+        <input 
+          type="password" 
+          class="form-control" 
+          [class.is-invalid]="password && !passwordValida"
+          [class.is-valid]="passwordValida"
+          id="password"
+          [(ngModel)]="password"
+          name="password"
+          required
+          placeholder="Ingrese una contraseña segura">
+        
+        <!-- Requerimientos de contraseña -->
+        <div class="password-requisitos mt-2" *ngIf="password">
+          <small class="d-block mb-2"><strong>Requisitos de contraseña:</strong></small>
+          <div class="requisito-item" [class.requisito-cumplido]="passwordRequisitos.longitud" [class.requisito-pendiente]="!passwordRequisitos.longitud">
+            <span class="requisito-icon">{{ passwordRequisitos.longitud ? '✓' : '○' }}</span>
+            <span>Mínimo 8 caracteres</span>
+          </div>
+          <div class="requisito-item" [class.requisito-cumplido]="passwordRequisitos.mayuscula" [class.requisito-pendiente]="!passwordRequisitos.mayuscula">
+            <span class="requisito-icon">{{ passwordRequisitos.mayuscula ? '✓' : '○' }}</span>
+            <span>Al menos una letra mayúscula (A-Z)</span>
+          </div>
+          <div class="requisito-item" [class.requisito-cumplido]="passwordRequisitos.minuscula" [class.requisito-pendiente]="!passwordRequisitos.minuscula">
+            <span class="requisito-icon">{{ passwordRequisitos.minuscula ? '✓' : '○' }}</span>
+            <span>Al menos una letra minúscula (a-z)</span>
+          </div>
+          <div class="requisito-item" [class.requisito-cumplido]="passwordRequisitos.numero" [class.requisito-pendiente]="!passwordRequisitos.numero">
+            <span class="requisito-icon">{{ passwordRequisitos.numero ? '✓' : '○' }}</span>
+            <span>Al menos un número (0-9)</span>
+          </div>
+          <div class="requisito-item" [class.requisito-cumplido]="passwordRequisitos.especial" [class.requisito-pendiente]="!passwordRequisitos.especial">
+            <span class="requisito-icon">{{ passwordRequisitos.especial ? '✓' : '○' }}</span>
+            <span>Al menos un carácter especial (!&#64;#$%^&amp;*...)</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="mb-3">
+        <label for="confirmPassword" class="form-label">Confirmar Contraseña</label>
+        <input 
+          type="password" 
+          class="form-control" 
+          [class.is-invalid]="confirmPassword && !passwordsCoinciden"
+          [class.is-valid]="passwordsCoinciden"
+          id="confirmPassword"
+          [(ngModel)]="confirmPassword"
+          name="confirmPassword"
+          required
+          placeholder="Repite tu contraseña">
+        <div *ngIf="confirmPassword && !passwordsCoinciden" class="invalid-feedback">
+          Las contraseñas no coinciden
+        </div>
+        <div *ngIf="passwordsCoinciden" class="valid-feedback">
+          ✓ Las contraseñas coinciden
+        </div>
+      </div>
+
+      <div *ngIf="errorMessage" class="alert alert-danger" role="alert">
+        {{ errorMessage }}
+      </div>
+
+      <div *ngIf="successMessage" class="alert alert-success" role="alert">
+        {{ successMessage }}
+        <p class="mb-0 mt-2"><small>Redirigiendo al login...</small></p>
+      </div>
+
+      <button 
+        type="submit" 
+        class="btn btn-primary w-100 mb-3"
+        [disabled]="isLoading || !registroForm.valid || !passwordValida || !passwordsCoinciden || emailEnUso">
+        <span *ngIf="!isLoading">Crear Cuenta</span>
+        <span *ngIf="isLoading">Creando cuenta...</span>
+      </button>
+    </form>
+
+    <div class="text-center">
+      <p class="mb-0">¿Ya tienes una cuenta?</p>
+      <button 
+        type="button" 
+        class="btn btn-link p-0"
+        (click)="irALogin()">
+        Inicia sesión aquí
+      </button>
+    </div>
+
+    <div class="registro-info mt-4">
+      <p class="text-center mb-2"><small class="text-muted">Al registrarte, crearás una cuenta de cliente que te permitirá realizar reservas en la barbería.</small></p>
+    </div>
+  </div>
+</div>

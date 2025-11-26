@@ -1,0 +1,258 @@
+<div class="barbero-container">
+  <div class="barbero-header">
+    <h1 class="barbero-title">Gestión de Horas</h1>
+    <button class="btn btn-outline-primary" (click)="cambiarVista()">
+      {{ modoVista === 'calendario' ? 'Ver Lista' : 'Ver Calendario' }}
+    </button>
+  </div>
+
+  <!-- Vista Calendario -->
+  <div *ngIf="modoVista === 'calendario'" class="calendario-container">
+    <div class="calendario-header">
+      <button 
+        type="button" 
+        class="btn btn-sm btn-outline-secondary"
+        (click)="semanaAnterior()"
+        [disabled]="!puedeNavegarAtras()">
+        ← Semana Anterior
+      </button>
+      <h4 class="mb-0">
+        {{ obtenerRangoSemana() }}
+      </h4>
+      <button 
+        type="button" 
+        class="btn btn-sm btn-outline-secondary"
+        (click)="semanaSiguiente()">
+        Semana Siguiente →
+      </button>
+    </div>
+
+    <div class="calendario-grid">
+      <!-- Encabezados de días -->
+      <div class="calendario-header-row">
+        <div class="hora-header"></div>
+        <div class="dia-header" *ngFor="let dia of semanaActual">
+          <div class="dia-nombre">{{ dia.diaNombre }}</div>
+          <div class="dia-fecha">{{ dia.diaNumero }} {{ dia.mes }}</div>
+        </div>
+      </div>
+
+      <!-- Filas de horas -->
+      <div class="calendario-fila" *ngFor="let hora of horarios">
+        <div class="hora-label">{{ hora }}</div>
+        <div 
+          class="slot-hora" 
+          *ngFor="let dia of semanaActual"
+          [ngClass]="{
+            'disponible': obtenerSlotInfo(dia.fechaISO, hora)?.disponible,
+            'reservada': obtenerSlotInfo(dia.fechaISO, hora)?.reserva,
+            'bloqueada': obtenerSlotInfo(dia.fechaISO, hora)?.bloqueada
+          }"
+          (click)="seleccionarSlot(obtenerSlotInfo(dia.fechaISO, hora)!)">
+          
+          <!-- Contenido del slot -->
+          <div *ngIf="obtenerSlotInfo(dia.fechaISO, hora)?.reserva" class="slot-reserva">
+            <div class="slot-cliente">{{ obtenerSlotInfo(dia.fechaISO, hora)?.reserva?.cliente }}</div>
+            <div class="slot-servicio">{{ obtenerSlotInfo(dia.fechaISO, hora)?.reserva?.servicio }}</div>
+            <div class="slot-estado" [ngClass]="getEstadoClass(obtenerSlotInfo(dia.fechaISO, hora)?.reserva?.estado || '')">
+              {{ obtenerSlotInfo(dia.fechaISO, hora)?.reserva?.estado | titlecase }}
+            </div>
+          </div>
+          
+          <div *ngIf="obtenerSlotInfo(dia.fechaISO, hora)?.bloqueada" class="slot-bloqueada">
+            <div class="slot-bloqueada-icon">🔒</div>
+            <div class="slot-bloqueada-texto">Bloqueada</div>
+            <div class="slot-bloqueada-motivo" *ngIf="obtenerSlotInfo(dia.fechaISO, hora)?.bloqueada?.motivo">
+              {{ obtenerSlotInfo(dia.fechaISO, hora)?.bloqueada?.motivo }}
+            </div>
+          </div>
+          
+          <div *ngIf="obtenerSlotInfo(dia.fechaISO, hora)?.disponible" class="slot-disponible">
+            Disponible
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Leyenda -->
+    <div class="calendario-leyenda mt-3">
+      <div class="leyenda-item">
+        <div class="leyenda-color disponible"></div>
+        <span>Disponible</span>
+      </div>
+      <div class="leyenda-item">
+        <div class="leyenda-color reservada"></div>
+        <span>Reservada</span>
+      </div>
+      <div class="leyenda-item">
+        <div class="leyenda-color bloqueada"></div>
+        <span>Bloqueada</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Vista Lista -->
+  <div *ngIf="modoVista === 'lista'" class="reservas-list">
+    <div *ngFor="let reserva of reservas" class="reserva-card">
+      <div class="reserva-header">
+        <h3>{{ reserva.cliente }}</h3>
+        <span class="estado-badge" [ngClass]="getEstadoClass(reserva.estado)">
+          {{ reserva.estado | titlecase }}
+        </span>
+      </div>
+      
+      <div class="reserva-info">
+        <div class="info-item">
+          <strong>Servicio:</strong> {{ reserva.servicio }}
+        </div>
+        <div class="info-item">
+          <strong>Fecha:</strong> {{ reserva.fecha }}
+        </div>
+        <div class="info-item">
+          <strong>Hora:</strong> {{ reserva.hora }}
+        </div>
+      </div>
+
+      <div class="reserva-actions">
+        <button 
+          *ngIf="reserva.estado === 'pendiente'"
+          class="btn btn-confirmar"
+          (click)="cambiarEstado(reserva.id, 'confirmada')">
+          Confirmar
+        </button>
+        <button 
+          *ngIf="reserva.estado === 'confirmada'"
+          class="btn btn-completar"
+          (click)="cambiarEstado(reserva.id, 'completada')">
+          Marcar como Completada
+        </button>
+        <button 
+          *ngIf="reserva.estado !== 'cancelada' && reserva.estado !== 'completada'"
+          class="btn btn-cancelar"
+          (click)="cancelarReserva(reserva.id)">
+          Cancelar
+        </button>
+        <button 
+          class="btn btn-info"
+          (click)="abrirGoogleCalendar(reserva)"
+          title="Agregar a Google Calendar">
+          📅 Google Calendar
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="reservas.length === 0" class="no-reservas">
+      <p>No tienes reservas asignadas</p>
+    </div>
+  </div>
+
+  <!-- Modal para acciones del slot -->
+  <div *ngIf="slotSeleccionado && !mostrarModalBloquear" class="modal-overlay" (click)="slotSeleccionado = null">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h5>Gestionar Hora</h5>
+        <button class="btn-close" (click)="slotSeleccionado = null">×</button>
+      </div>
+      <div class="modal-body">
+        <div *ngIf="slotSeleccionado.reserva">
+          <h6>Reserva</h6>
+          <p><strong>Cliente:</strong> {{ slotSeleccionado.reserva.cliente }}</p>
+          <p><strong>Servicio:</strong> {{ slotSeleccionado.reserva.servicio }}</p>
+          <p><strong>Fecha:</strong> {{ slotSeleccionado.reserva.fecha }}</p>
+          <p><strong>Hora:</strong> {{ slotSeleccionado.reserva.hora }}</p>
+          <p><strong>Estado:</strong> {{ slotSeleccionado.reserva.estado | titlecase }}</p>
+          <p *ngIf="slotSeleccionado.reserva.notas"><strong>Notas:</strong> {{ slotSeleccionado.reserva.notas }}</p>
+          
+          <div class="modal-actions">
+            <button 
+              *ngIf="slotSeleccionado.reserva.estado === 'pendiente'"
+              class="btn btn-primary"
+              (click)="cambiarEstado(slotSeleccionado.reserva!.id, 'confirmada'); slotSeleccionado = null">
+              Confirmar
+            </button>
+            <button 
+              *ngIf="slotSeleccionado.reserva.estado === 'confirmada'"
+              class="btn btn-success"
+              (click)="cambiarEstado(slotSeleccionado.reserva!.id, 'completada'); slotSeleccionado = null">
+              Marcar Completada
+            </button>
+            <button 
+              *ngIf="slotSeleccionado.reserva.estado !== 'cancelada' && slotSeleccionado.reserva.estado !== 'completada'"
+              class="btn btn-danger"
+              (click)="cancelarReserva(slotSeleccionado.reserva!.id)">
+              Cancelar Reserva
+            </button>
+            <button 
+              class="btn btn-info"
+              (click)="abrirGoogleCalendar(slotSeleccionado.reserva!)">
+              📅 Agregar a Google Calendar
+            </button>
+          </div>
+        </div>
+
+        <div *ngIf="slotSeleccionado.bloqueada">
+          <h6>Hora Bloqueada</h6>
+          <p><strong>Fecha:</strong> {{ slotSeleccionado.bloqueada.fecha }}</p>
+          <p><strong>Hora:</strong> {{ slotSeleccionado.bloqueada.hora }}</p>
+          <p *ngIf="slotSeleccionado.bloqueada.motivo"><strong>Motivo:</strong> {{ slotSeleccionado.bloqueada.motivo }}</p>
+          
+          <div class="modal-actions" *ngIf="slotSeleccionado.bloqueada.motivo !== 'Hora pasada'">
+            <button 
+              class="btn btn-warning"
+              (click)="liberarHora(slotSeleccionado!.fecha, slotSeleccionado!.hora)">
+              Liberar Hora
+            </button>
+          </div>
+          <div *ngIf="slotSeleccionado.bloqueada.motivo === 'Hora pasada'" class="alert alert-info">
+            <small>Esta hora ya pasó y no puede ser liberada.</small>
+          </div>
+        </div>
+
+        <div *ngIf="slotSeleccionado.disponible">
+          <h6>Hora Disponible</h6>
+          <p><strong>Fecha:</strong> {{ slotSeleccionado.fecha }}</p>
+          <p><strong>Hora:</strong> {{ slotSeleccionado.hora }}</p>
+          
+          <div class="modal-actions">
+            <button 
+              class="btn btn-warning"
+              (click)="abrirModalBloquear(slotSeleccionado!)">
+              Bloquear Hora
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal para bloquear hora -->
+  <div *ngIf="mostrarModalBloquear" class="modal-overlay" (click)="cerrarModalBloquear()">
+    <div class="modal-content" (click)="$event.stopPropagation()">
+      <div class="modal-header">
+        <h5>Bloquear Hora</h5>
+        <button class="btn-close" (click)="cerrarModalBloquear()">×</button>
+      </div>
+      <div class="modal-body">
+        <p><strong>Fecha:</strong> {{ slotSeleccionado?.fecha }}</p>
+        <p><strong>Hora:</strong> {{ slotSeleccionado?.hora }}</p>
+        
+        <div class="mb-3">
+          <label for="motivoBloqueo" class="form-label">Motivo (opcional)</label>
+          <textarea 
+            class="form-control" 
+            id="motivoBloqueo"
+            [(ngModel)]="motivoBloqueo"
+            rows="3"
+            placeholder="Ej: No trabajaré este día, Vacaciones, etc."></textarea>
+        </div>
+        
+        <div class="modal-actions">
+          <button class="btn btn-secondary" (click)="cerrarModalBloquear()">Cancelar</button>
+          <button class="btn btn-warning" (click)="bloquearHora(slotSeleccionado!.fecha, slotSeleccionado!.hora)">
+            Bloquear Hora
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>

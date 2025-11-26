@@ -1,0 +1,51 @@
+<!-- Hero Section -->
+<section class="hero-section">
+  <div class="container">
+    <div class="hero-content">
+      <h1 class="hero-title">Nuestra Ubicación</h1>
+      <p class="hero-subtitle">Visítanos en nuestra barbería, estamos esperándote</p>
+    </div>
+  </div>
+</section>
+
+<!-- Dirección Section -->
+<section class="direccion-section">
+  <div class="container">
+    <div class="direccion-content">
+      <div class="direccion-info">
+        <h2 class="section-title">Encuéntranos</h2>
+        <div class="info-card">
+          <div class="info-item">
+            <i class="bi bi-geo-alt-fill"></i>
+            <div class="info-text">
+              <h4>Dirección</h4>
+              <p>Esmeralda, Talca, Maule</p>
+            </div>
+          </div>
+          <div class="info-item">
+            <i class="bi bi-geo-alt"></i>
+            <div class="info-text">
+              <h4>Coordenadas</h4>
+              <p>-35.4269, -71.6550</p>
+            </div>
+          </div>
+          <button class="btn btn-primary" (click)="openMaps()">
+            <i class="bi bi-map"></i> Abrir en Google Maps
+          </button>
+        </div>
+      </div>
+      <div class="map-container" (click)="openMaps()">
+        <div class="map-wrapper">
+          <iframe
+            src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d9919.827899278733!2d-71.65709133266179!3d-35.42694374980543!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x96b854d4999970ff%3A0xdf3e119d59134a76!2sEsmeralda%2C%20Talca%2C%20Maule!5e0!3m2!1ses!2scl!4v1686799654097!5m2!1ses!2scl"
+            loading="lazy"
+            referrerpolicy="no-referrer-when-downgrade">
+          </iframe>
+          <div class="map-overlay">
+            <p class="overlay-text">Haz clic para abrir en Google Maps</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

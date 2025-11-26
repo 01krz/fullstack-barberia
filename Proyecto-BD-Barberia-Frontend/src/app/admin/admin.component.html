@@ -1,0 +1,463 @@
+<div class="admin-container">
+  <h1 class="admin-title">Panel de Administración</h1>
+  
+  <div class="tabs">
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'servicios'"
+      (click)="setActiveTab('servicios')">
+      Gestionar Servicios
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'barberos'"
+      (click)="setActiveTab('barberos')">
+      Gestionar Barberos
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'productos'"
+      (click)="setActiveTab('productos')">
+      Gestionar Productos
+    </button>
+    <button 
+      class="tab-button" 
+      [class.active]="activeTab === 'promociones'"
+      (click)="setActiveTab('promociones')">
+      Gestionar Promociones
+    </button>
+  </div>
+
+  <!-- Tab de Servicios -->
+  <div *ngIf="activeTab === 'servicios'" class="tab-content">
+    <div class="form-section">
+      <h2>Agregar Nuevo Servicio</h2>
+      <form (ngSubmit)="agregarServicio()" class="form-card">
+        <div class="mb-3">
+          <label for="nombreServicio" class="form-label">Nombre del Servicio</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="nombreServicio"
+            [(ngModel)]="nuevoServicio.nombre"
+            name="nombreServicio"
+            required>
+        </div>
+        <div class="mb-3">
+          <label for="descripcionServicio" class="form-label">Descripción</label>
+          <textarea 
+            class="form-control" 
+            id="descripcionServicio"
+            [(ngModel)]="nuevoServicio.descripcion"
+            name="descripcionServicio"
+            rows="3"
+            required></textarea>
+        </div>
+        <div class="mb-3">
+          <label for="precioServicio" class="form-label">Precio ($)</label>
+          <input 
+            type="number" 
+            class="form-control" 
+            id="precioServicio"
+            [(ngModel)]="nuevoServicio.precio"
+            name="precioServicio"
+            min="0"
+            required>
+          <small class="form-text text-muted">Todos los servicios tienen una duración fija de 30 minutos</small>
+        </div>
+        <div class="mb-3">
+          <div class="form-check">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="activoServicio"
+              [(ngModel)]="nuevoServicio.activo"
+              name="activoServicio"
+              checked>
+            <label class="form-check-label" for="activoServicio">
+              Servicio activo (disponible para reservas)
+            </label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Agregar Servicio</button>
+      </form>
+    </div>
+
+    <div class="list-section">
+      <h2>Servicios Existentes</h2>
+      <div class="card-list">
+        <div *ngFor="let servicio of servicios" class="card-item">
+          <div class="card-content">
+            <h3>{{ servicio.nombre }}</h3>
+            <p>{{ servicio.descripcion }}</p>
+            <div class="card-info">
+              <span><strong>Precio:</strong> ${{ servicio.precio | number }}</span>
+              <span><strong>Duración:</strong> 30 min (fija)</span>
+              <span [class.text-success]="servicio.activo" [class.text-danger]="!servicio.activo">
+                <strong>Estado:</strong> {{ servicio.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button 
+              class="btn btn-sm" 
+              [class.btn-success]="!servicio.activo"
+              [class.btn-warning]="servicio.activo"
+              (click)="toggleServicioActivo(servicio)">
+              {{ servicio.activo ? 'Desactivar' : 'Activar' }}
+            </button>
+            <button class="btn btn-danger btn-sm" (click)="eliminarServicio(servicio.id)">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab de Barberos -->
+  <div *ngIf="activeTab === 'barberos'" class="tab-content">
+    <div class="form-section">
+      <h2>Agregar Nuevo Barbero</h2>
+      <p class="text-muted mb-3">
+        <strong>Importante:</strong> Solo se pueden agregar barberos que ya se hayan registrado como usuarios (clientes). 
+        Busque el usuario por su email y luego complete los datos adicionales.
+      </p>
+      <form (ngSubmit)="agregarBarbero()" class="form-card">
+        <div class="mb-3">
+          <label for="emailBusquedaBarbero" class="form-label">Buscar Usuario por Email</label>
+          <div class="input-group">
+            <input 
+              type="email" 
+              class="form-control" 
+              id="emailBusquedaBarbero"
+              [(ngModel)]="emailBusquedaBarbero"
+              name="emailBusquedaBarbero"
+              placeholder="email@ejemplo.com"
+              [disabled]="!!usuarioEncontrado">
+            <button 
+              type="button" 
+              class="btn btn-primary" 
+              (click)="buscarUsuarioParaBarbero()"
+              [disabled]="!!usuarioEncontrado">
+              Buscar
+            </button>
+          </div>
+          <div *ngIf="mensajeBusquedaBarbero" 
+               [class.text-success]="usuarioEncontrado" 
+               [class.text-danger]="!usuarioEncontrado"
+               class="mt-2">
+            {{ mensajeBusquedaBarbero }}
+          </div>
+        </div>
+        <div *ngIf="usuarioEncontrado" class="alert alert-success">
+          <strong>Usuario encontrado:</strong> {{ usuarioEncontrado.nombre }} ({{ usuarioEncontrado.email }})
+        </div>
+        <div class="mb-3">
+          <label for="nombreBarbero" class="form-label">Nombre</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="nombreBarbero"
+            [(ngModel)]="nuevoBarbero.nombre"
+            name="nombreBarbero"
+            [readonly]="!!usuarioEncontrado"
+            required>
+        </div>
+        <div class="mb-3">
+          <label for="emailBarbero" class="form-label">Email</label>
+          <input 
+            type="email" 
+            class="form-control" 
+            id="emailBarbero"
+            [(ngModel)]="nuevoBarbero.email"
+            name="emailBarbero"
+            [readonly]="!!usuarioEncontrado"
+            required>
+        </div>
+        <div class="mb-3">
+          <label for="telefonoBarbero" class="form-label">Teléfono</label>
+          <input 
+            type="tel" 
+            class="form-control" 
+            id="telefonoBarbero"
+            [(ngModel)]="nuevoBarbero.telefono"
+            name="telefonoBarbero"
+            required>
+        </div>
+        <div class="mb-3">
+          <label for="googleCalendarEmailBarbero" class="form-label">Email de Google Calendar (opcional)</label>
+          <input 
+            type="email" 
+            class="form-control" 
+            id="googleCalendarEmailBarbero"
+            [(ngModel)]="nuevoBarbero.googleCalendarEmail"
+            name="googleCalendarEmailBarbero"
+            placeholder="barbero@gmail.com">
+          <small class="form-text text-muted">Email de Google donde se enviarán las citas del barbero</small>
+        </div>
+        <div class="mb-3">
+          <div class="form-check">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="activoBarbero"
+              [(ngModel)]="nuevoBarbero.activo"
+              name="activoBarbero"
+              checked>
+            <label class="form-check-label" for="activoBarbero">
+              Barbero activo (disponible para reservas)
+            </label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Agregar Barbero</button>
+      </form>
+    </div>
+
+    <div class="list-section">
+      <h2>Barberos Registrados</h2>
+      <div class="card-list">
+        <div *ngFor="let barbero of barberos" class="card-item">
+          <div class="card-content">
+            <h3>{{ barbero.nombre }}</h3>
+            <div class="card-info">
+              <span><strong>Email:</strong> {{ barbero.email }}</span>
+              <span><strong>Teléfono:</strong> {{ barbero.telefono }}</span>
+              <span *ngIf="barbero.googleCalendarEmail"><strong>Google Calendar:</strong> {{ barbero.googleCalendarEmail }}</span>
+              <span [class.text-success]="barbero.activo" [class.text-danger]="!barbero.activo">
+                <strong>Estado:</strong> {{ barbero.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button 
+              class="btn btn-sm" 
+              [class.btn-success]="!barbero.activo"
+              [class.btn-warning]="barbero.activo"
+              (click)="toggleBarberoActivo(barbero)">
+              {{ barbero.activo ? 'Desactivar' : 'Activar' }}
+            </button>
+            <button class="btn btn-danger btn-sm" (click)="eliminarBarbero(barbero.id)">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab de Productos -->
+  <div *ngIf="activeTab === 'productos'" class="tab-content">
+    <div class="form-section">
+      <h2>Agregar Nuevo Producto</h2>
+      <form (ngSubmit)="agregarProducto()" class="form-card">
+        <div class="mb-3">
+          <label for="nombreProducto" class="form-label">Nombre del Producto</label>
+          <input 
+            type="text" 
+            class="form-control" 
+            id="nombreProducto"
+            [(ngModel)]="nuevoProducto.nombre"
+            name="nombreProducto"
+            required>
+        </div>
+        <div class="mb-3">
+          <label for="descripcionProducto" class="form-label">Descripción</label>
+          <textarea 
+            class="form-control" 
+            id="descripcionProducto"
+            [(ngModel)]="nuevoProducto.descripcion"
+            name="descripcionProducto"
+            rows="3"
+            required></textarea>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="precioProducto" class="form-label">Precio ($)</label>
+            <input 
+              type="number" 
+              class="form-control" 
+              id="precioProducto"
+              [(ngModel)]="nuevoProducto.precio"
+              name="precioProducto"
+              min="0"
+              required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="stockProducto" class="form-label">Stock</label>
+            <input 
+              type="number" 
+              class="form-control" 
+              id="stockProducto"
+              [(ngModel)]="nuevoProducto.stock"
+              name="stockProducto"
+              min="0"
+              required>
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="form-check">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="activoProducto"
+              [(ngModel)]="nuevoProducto.activo"
+              name="activoProducto">
+            <label class="form-check-label" for="activoProducto">
+              Producto activo (disponible para venta)
+            </label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Agregar Producto</button>
+      </form>
+    </div>
+
+    <div class="list-section">
+      <h2>Productos Existentes</h2>
+      <div class="card-list">
+        <div *ngFor="let producto of productos" class="card-item">
+          <div class="card-content">
+            <h3>{{ producto.nombre }}</h3>
+            <p>{{ producto.descripcion }}</p>
+            <div class="card-info">
+              <span><strong>Precio:</strong> ${{ producto.precio | number }}</span>
+              <span><strong>Stock:</strong> {{ producto.stock }} unidades</span>
+              <span [class.text-success]="producto.activo" [class.text-danger]="!producto.activo">
+                <strong>Estado:</strong> {{ producto.activo ? 'Activo' : 'Inactivo' }}
+              </span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button 
+              class="btn btn-sm" 
+              [class.btn-success]="!producto.activo"
+              [class.btn-warning]="producto.activo"
+              (click)="toggleProductoActivo(producto)">
+              {{ producto.activo ? 'Desactivar' : 'Activar' }}
+            </button>
+            <button class="btn btn-danger btn-sm" (click)="eliminarProducto(producto.id)">Eliminar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Tab de Promociones -->
+  <div *ngIf="activeTab === 'promociones'" class="tab-content">
+    <div class="form-section">
+      <h2>Agregar Nueva Promoción</h2>
+      <form (ngSubmit)="agregarPromocion()" class="form-card">
+        <div class="mb-3">
+          <label for="servicioPromocion" class="form-label">Servicio</label>
+          <select 
+            class="form-control" 
+            id="servicioPromocion"
+            [(ngModel)]="nuevaPromocion.servicioId"
+            name="servicioPromocion"
+            required>
+            <option [value]="0">Seleccione un servicio</option>
+            <option *ngFor="let servicio of servicios" [value]="servicio.id">
+              {{ servicio.nombre }} - ${{ servicio.precio | number }}
+            </option>
+          </select>
+        </div>
+        <div class="mb-3">
+          <label for="productoPromocion" class="form-label">Producto (Opcional)</label>
+          <select 
+            class="form-control" 
+            id="productoPromocion"
+            [(ngModel)]="nuevaPromocion.productoId"
+            name="productoPromocion">
+            <option [value]="null">Solo servicio (sin producto)</option>
+            <option *ngFor="let producto of productos" [value]="producto.id">
+              {{ producto.nombre }} - ${{ producto.precio | number }}
+            </option>
+          </select>
+          <small class="form-text text-muted">Si selecciona un producto, el descuento aplicará al servicio y producto juntos</small>
+        </div>
+        <div class="mb-3">
+          <label for="porcentajeDescuento" class="form-label">Porcentaje de Descuento (%)</label>
+          <input 
+            type="number" 
+            class="form-control" 
+            id="porcentajeDescuento"
+            [(ngModel)]="nuevaPromocion.porcentajeDescuento"
+            name="porcentajeDescuento"
+            min="1"
+            max="100"
+            required>
+          <small class="form-text text-muted">Ingrese un valor entre 1 y 100</small>
+        </div>
+        <div class="row">
+          <div class="col-md-6 mb-3">
+            <label for="fechaInicio" class="form-label">Fecha de Inicio</label>
+            <input 
+              type="date" 
+              class="form-control" 
+              id="fechaInicio"
+              [(ngModel)]="nuevaPromocion.fechaInicio"
+              name="fechaInicio"
+              required>
+          </div>
+          <div class="col-md-6 mb-3">
+            <label for="fechaFin" class="form-label">Fecha de Fin</label>
+            <input 
+              type="date" 
+              class="form-control" 
+              id="fechaFin"
+              [(ngModel)]="nuevaPromocion.fechaFin"
+              name="fechaFin"
+              required>
+          </div>
+        </div>
+        <div class="mb-3">
+          <div class="form-check">
+            <input 
+              class="form-check-input" 
+              type="checkbox" 
+              id="activaPromocion"
+              [(ngModel)]="nuevaPromocion.activa"
+              name="activaPromocion"
+              checked>
+            <label class="form-check-label" for="activaPromocion">
+              Promoción activa
+            </label>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">Agregar Promoción</button>
+      </form>
+    </div>
+
+    <div class="list-section">
+      <h2>Promociones Existentes</h2>
+      <div class="card-list">
+        <div *ngFor="let promocion of promociones" class="card-item">
+          <div class="card-content">
+            <h3>Promoción #{{ promocion.id }}</h3>
+            <div class="card-info">
+              <span><strong>Servicio:</strong> {{ obtenerNombreServicio(promocion.servicioId) }}</span>
+              <span><strong>Producto:</strong> {{ obtenerNombreProducto(promocion.productoId) }}</span>
+              <span><strong>Descuento:</strong> {{ promocion.porcentajeDescuento }}%</span>
+              <span><strong>Inicio:</strong> {{ promocion.fechaInicio | date:'short' }}</span>
+              <span><strong>Fin:</strong> {{ promocion.fechaFin | date:'short' }}</span>
+              <span [class.text-success]="promocion.activa" [class.text-danger]="!promocion.activa">
+                <strong>Estado:</strong> {{ promocion.activa ? 'Activa' : 'Inactiva' }}
+              </span>
+            </div>
+          </div>
+          <div class="card-actions">
+            <button 
+              class="btn btn-sm" 
+              [class.btn-success]="!promocion.activa"
+              [class.btn-warning]="promocion.activa"
+              (click)="togglePromocionActiva(promocion)">
+              {{ promocion.activa ? 'Desactivar' : 'Activar' }}
+            </button>
+            <button class="btn btn-danger btn-sm" (click)="eliminarPromocion(promocion.id)">Eliminar</button>
+          </div>
+        </div>
+      </div>
+      <div *ngIf="promociones.length === 0" class="text-center text-muted mt-4">
+        <p>No hay promociones registradas</p>
+      </div>
+    </div>
+  </div>
+</div>
+
+

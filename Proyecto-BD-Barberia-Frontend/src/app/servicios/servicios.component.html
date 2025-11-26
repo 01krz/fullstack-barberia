@@ -1,0 +1,106 @@
+<!-- Hero Section -->
+<section class="hero-section">
+  <div class="container">
+    <div class="hero-content">
+      <h1 class="hero-title">Nuestros Servicios</h1>
+      <p class="hero-subtitle">Descubre nuestra amplia gama de servicios profesionales de barbería</p>
+    </div>
+  </div>
+</section>
+
+<!-- Servicios Section -->
+<section class="servicios-section">
+  <div class="container">
+    <div *ngIf="isInvitado()" class="alert alert-info" role="alert">
+      <strong>Modo Invitado:</strong> Puedes ver los servicios disponibles, pero necesitas registrarte como usuario para realizar reservas.
+    </div>
+
+    <div *ngIf="servicios.length === 0" class="no-servicios">
+      <div class="no-servicios-content">
+        <i class="bi bi-info-circle"></i>
+        <h3>No hay servicios disponibles</h3>
+        <p>En este momento no contamos con servicios disponibles. Vuelve pronto para ver nuestras ofertas.</p>
+      </div>
+    </div>
+
+    <!-- Sección de Promociones -->
+    <div *ngIf="promociones.length > 0" class="promociones-section">
+      <h2 class="section-title">
+        <i class="bi bi-tag-fill"></i> Promociones Especiales
+      </h2>
+      <div class="promociones-banners">
+        <div class="promocion-banner" *ngFor="let promocion of promociones">
+          <div class="promocion-banner-content">
+            <div class="promocion-icon">
+              <i class="bi bi-percent"></i>
+            </div>
+            <div class="promocion-text-content">
+              <h4 class="promocion-title">
+                <i class="bi bi-gift-fill"></i> ¡Oferta Especial!
+              </h4>
+              <ng-container *ngIf="obtenerServicioPorPromocion(promocion) as servicio">
+                <ng-container *ngIf="obtenerProductoPorPromocion(promocion) as producto">
+                  <p class="promocion-message">
+                    Llevando <strong>{{ servicio.nombre }}</strong> + <strong>{{ producto.nombre }}</strong> 
+                    obtienes un <strong class="descuento-text">{{ promocion.porcentajeDescuento }}% de descuento</strong> 
+                    en el total de tu reserva.
+                  </p>
+                </ng-container>
+                <ng-container *ngIf="!obtenerProductoPorPromocion(promocion)">
+                  <p class="promocion-message">
+                    Reservando <strong>{{ servicio.nombre }}</strong> obtienes un 
+                    <strong class="descuento-text">{{ promocion.porcentajeDescuento }}% de descuento</strong>.
+                  </p>
+                </ng-container>
+              </ng-container>
+              <ng-container *ngIf="!obtenerServicioPorPromocion(promocion)">
+                <p class="promocion-message">
+                  Cargando información de la promoción...
+                </p>
+              </ng-container>
+              <p class="promocion-validity">
+                <i class="bi bi-calendar-event"></i> 
+                Válido hasta: {{ promocion.fechaFin | date:'short' }}
+              </p>
+            </div>
+            <div class="promocion-badge-large">
+              {{ promocion.porcentajeDescuento }}%<br>
+              <small>OFF</small>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sección de Servicios Regulares -->
+    <div *ngIf="servicios.length > 0" class="servicios-regular-section">
+      <h2 class="section-title" *ngIf="promociones.length > 0">
+        <i class="bi bi-scissors"></i> Todos los Servicios
+      </h2>
+      <div class="servicios-grid">
+        <div class="servicio-card" *ngFor="let servicio of servicios" [class.hidden]="tienePromocion(servicio)">
+          <div class="servicio-header">
+            <h3 class="servicio-title">{{ servicio.nombre }}</h3>
+          </div>
+          <div class="servicio-body">
+            <p class="servicio-descripcion">{{ servicio.descripcion }}</p>
+            <div class="servicio-info">
+              <div class="info-item">
+                <i class="bi bi-currency-dollar"></i>
+                <span class="info-label">Precio:</span>
+                <span class="info-value">${{ servicio.precio | number }}</span>
+              </div>
+            </div>
+          </div>
+          <div class="servicio-footer">
+            <button 
+              class="btn btn-primary"
+              (click)="reservar(servicio.nombre)">
+              <i class="bi bi-calendar-check"></i> Reservar Ahora
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>

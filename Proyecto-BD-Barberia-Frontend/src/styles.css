@@ -1,0 +1,93 @@
+/* You can add global styles to this file, and also import other style files */
+
+/* Paleta de colores */
+:root {
+  --color1: #000000;
+  --color2: #1f1728;
+  --color3: #676374;
+  --color4: #b7b4bd;
+  --color5: #f9f9f9;
+}
+
+/* Estilos globales */
+* {
+  box-sizing: border-box;
+}
+
+body {
+  background-color: var(--color2);
+  color: var(--color5);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.general-styles {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background-color: var(--color2);
+}
+
+/* Títulos con paleta de colores */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--color5);
+  font-weight: 600;
+}
+
+h1 {
+  color: var(--color5);
+}
+
+h2 {
+  color: var(--color5);
+}
+
+h3, h4, h5, h6 {
+  color: var(--color4);
+}
+
+/* Enlaces con paleta de colores */
+a {
+  color: var(--color4);
+  text-decoration: none;
+  transition: color 0.3s ease;
+}
+
+a:hover {
+  color: var(--color5);
+}
+
+/* Texto general sobre fondo oscuro */
+p {
+  color: var(--color4);
+}
+
+/* Contenedores sobre fondo oscuro */
+.container {
+  background-color: transparent;
+}
+
+/* Inputs y formularios */
+.form-control:focus {
+  border-color: var(--color3);
+  box-shadow: 0 0 0 0.2rem rgba(103, 99, 116, 0.25);
+}
+
+/* Scrollbar personalizado */
+::-webkit-scrollbar {
+  width: 10px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--color2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--color3);
+  border-radius: 5px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--color4);
+}
