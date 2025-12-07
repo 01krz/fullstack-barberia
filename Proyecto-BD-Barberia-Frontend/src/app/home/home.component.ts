@@ -26,23 +26,26 @@ export class HomeComponent implements OnInit {
     private servicioService: ServicioService,
     private promocionService: PromocionService,
     private productoService: ProductoService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Cargar todos los datos en paralelo para asegurar que estén disponibles
     combineLatest([
       this.servicioService.obtenerServicios(),
-      this.promocionService.obtenerPromociones(),
+      this.promocionService.obtenerPromocionesActivas(),
       this.productoService.obtenerProductos()
     ]).subscribe(([servicios, promociones, productos]) => {
       this.servicios = servicios.filter(s => s.activo);
       // Mostrar solo los primeros 3 servicios activos como destacados
       this.serviciosDestacados = this.servicios.slice(0, 3);
-      
+
       this.productos = productos;
-      
-      // Cargar promociones activas solo después de que servicios y productos estén cargados
-      this.promociones = this.promocionService.obtenerPromocionesActivas().slice(0, 3);
+
+      // Filtrar promociones para asegurarnos de que el servicio asociado existe y está activo
+      const promocionesValidas = promociones.filter(p => this.servicios.some(s => s.id === p.servicioId));
+
+      // Mostrar solo las primeras 3 promociones activas válidas
+      this.promociones = promocionesValidas.slice(0, 3);
     });
   }
 

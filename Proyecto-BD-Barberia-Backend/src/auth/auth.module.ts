@@ -4,6 +4,7 @@ import { PassportModule } from '@nestjs/passport';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './strategies/jwt.strategy';
+import { UsuariosModule } from '../usuarios/usuarios.module';
 
 @Module({
   imports: [
@@ -12,10 +13,11 @@ import { JwtStrategy } from './strategies/jwt.strategy';
       secret: 'tu-clave-secreta-jwt-cambiar-en-produccion',
       signOptions: { expiresIn: '24h' },
     }),
+    UsuariosModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, JwtStrategy],
   exports: [AuthService],
 })
-export class AuthModule {}
+export class AuthModule { }
 

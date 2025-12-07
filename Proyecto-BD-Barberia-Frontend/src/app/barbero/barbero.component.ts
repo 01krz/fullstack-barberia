@@ -1,10 +1,11 @@
 import { Component, OnInit } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
+import { Reserva, HoraBloqueada } from '../models/reserva.model';
 import { AuthService } from '../services/auth.service';
 import { ReservaService } from '../services/reserva.service';
 import { GoogleCalendarService } from '../services/google-calendar.service';
-import { Reserva, HoraBloqueada } from '../models/reserva.model';
+import { BarberoService } from '../services/barbero.service';
 
 interface DiaSemana {
   fecha: Date;
@@ -45,7 +46,8 @@ export class BarberoComponent implements OnInit {
   constructor(
     public authService: AuthService,
     private reservaService: ReservaService,
-    private googleCalendarService: GoogleCalendarService
+    private googleCalendarService: GoogleCalendarService,
+    private barberoService: BarberoService
   ) {
     this.generarHorarios();
     this.inicializarSemana();
@@ -53,22 +55,52 @@ export class BarberoComponent implements OnInit {
 
   ngOnInit(): void {
     const usuario = this.authService.getCurrentUser();
-    if (usuario) {
-      this.barberoId = usuario.id;
+    console.log('DEBUG: Usuario actual:', usuario);
+
+    if (usuario && usuario.id !== 0 && usuario.rol !== 'invitado') {
+      // Buscar el ID del barbero usando el email del usuario
+      this.barberoService.obtenerBarberos().subscribe(barberos => {
+        const barberoEncontrado = barberos.find(b => b.email === usuario.email);
+
+        if (barberoEncontrado) {
+          this.barberoId = barberoEncontrado.id;
+          console.log('DEBUG: ID Barbero resuelto por email:', this.barberoId);
+
+          // Cargar datos una vez que tenemos el ID correcto
+          this.cargarDatos();
+        } else {
+          console.warn('DEBUG: No se encontró un barbero con el email:', usuario.email);
+          // Fallback al ID de usuario si no se encuentra (comportamiento anterior)
+          this.barberoId = usuario.id;
+          this.cargarDatos();
+        }
+      });
     }
+  }
 
-    // Suscribirse a cambios en reservas y horas bloqueadas
-    this.reservaService.obtenerReservas().subscribe(reservas => {
-      this.reservas = reservas.filter(r => r.barberoId === this.barberoId);
-      this.actualizarSlots();
+  cargarDatos(): void {
+    // Cargar bloqueos desde el backend
+    this.reservaService.obtenerBloqueos(this.barberoId).subscribe({
+      next: (bloqueos) => {
+        console.log('DEBUG: Bloqueos cargados:', bloqueos);
+        this.horasBloqueadas = bloqueos;
+        this.actualizarSlots();
+      },
+      error: (err) => {
+        console.error('Error al cargar bloqueos:', err);
+      }
     });
 
-    this.reservaService.obtenerHorasBloqueadas().subscribe(horas => {
-      this.horasBloqueadas = horas.filter(h => h.barberoId === this.barberoId);
-      this.actualizarSlots();
+    // Cargar reservas
+    this.reservaService.obtenerReservasPorBarbero(this.barberoId).subscribe({
+      next: (reservas) => {
+        this.reservas = reservas;
+        this.actualizarSlots();
+      },
+      error: (err) => {
+        console.error('Error al cargar reservas:', err);
+      }
     });
-
-    this.actualizarSlots();
   }
 
   generarHorarios(): void {
@@ -92,11 +124,11 @@ export class BarberoComponent implements OnInit {
     const dias: DiaSemana[] = [];
     const nombresDias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
     const nombresMeses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
-    
+
     for (let i = 0; i < 7; i++) {
       const fecha = new Date(this.semanaInicio);
       fecha.setDate(this.semanaInicio.getDate() + i);
-      
+
       const diaSemana: DiaSemana = {
         fecha: fecha,
         diaNombre: nombresDias[fecha.getDay()],
@@ -106,44 +138,48 @@ export class BarberoComponent implements OnInit {
       };
       dias.push(diaSemana);
     }
-    
+
     this.semanaActual = dias;
     this.actualizarSlots();
   }
 
   actualizarSlots(): void {
     this.slotsInfo.clear();
-    
+
     const ahora = new Date();
-    
+
     this.semanaActual.forEach(dia => {
-      const esHoy = dia.fechaISO === ahora.toISOString().split('T')[0];
-      
+      const hoyISO = ahora.toISOString().split('T')[0];
+      const esHoy = dia.fechaISO === hoyISO;
+      const esDiaPasado = dia.fechaISO < hoyISO;
+
       this.horarios.forEach(hora => {
         const clave = `${dia.fechaISO}_${hora}`;
-        
+
         // Si es hoy, verificar si la hora ya pasó
         let esHoraPasada = false;
-        if (esHoy) {
+
+        if (esDiaPasado) {
+          esHoraPasada = true;
+        } else if (esHoy) {
           const [hour, minute] = hora.split(':').map(Number);
           const horaReserva = new Date(ahora.getFullYear(), ahora.getMonth(), ahora.getDate(), hour, minute);
           esHoraPasada = horaReserva < ahora;
         }
-        
+
         // Buscar reserva
-        const reserva = this.reservas.find(r => 
-          r.fecha === dia.fechaISO && 
-          r.hora === hora &&
-          r.estado !== 'cancelada' &&
-          r.estado !== 'completada'
+        const reserva = this.reservas.find(r =>
+          r.fecha === dia.fechaISO &&
+          r.hora.substring(0, 5) === hora &&
+          r.estado !== 'cancelada'
         );
-        
+
         // Buscar hora bloqueada
-        const bloqueada = this.horasBloqueadas.find(h => 
-          h.fecha === dia.fechaISO && 
-          h.hora === hora
+        const bloqueada = this.horasBloqueadas.find(h =>
+          h.fecha === dia.fechaISO &&
+          h.hora.substring(0, 5) === hora
         );
-        
+
         // Si es hora pasada y no hay reserva, crear bloqueo virtual
         let bloqueadaFinal = bloqueada;
         if (esHoraPasada && !reserva && !bloqueada) {
@@ -156,10 +192,10 @@ export class BarberoComponent implements OnInit {
             fechaCreacion: new Date().toISOString()
           };
         }
-        
+
         // No disponible si es hora pasada, tiene reserva o está bloqueada
         const disponible = !esHoraPasada && !reserva && !bloqueada;
-        
+
         this.slotsInfo.set(clave, {
           fecha: dia.fechaISO,
           hora: hora,
@@ -182,23 +218,40 @@ export class BarberoComponent implements OnInit {
 
   cancelarReserva(reservaId: number): void {
     if (confirm('¿Está seguro de cancelar esta reserva?')) {
-      this.reservaService.cancelarReserva(reservaId);
-      this.slotSeleccionado = null;
-      alert('Reserva cancelada correctamente');
+      this.reservaService.cancelarReserva(reservaId).subscribe({
+        next: (exito) => {
+          if (exito) {
+            this.slotSeleccionado = null;
+            alert('Reserva cancelada correctamente');
+            this.cargarDatos();
+          } else {
+            alert('No se pudo cancelar la reserva. Intente nuevamente.');
+          }
+        },
+        error: (err) => {
+          console.error('Error al cancelar:', err);
+          alert('Ocurrió un error al cancelar la reserva');
+        }
+      });
     }
   }
 
   bloquearHora(fecha: string, hora: string): void {
     if (this.motivoBloqueo.trim() || confirm('¿Desea bloquear esta hora sin motivo?')) {
-      try {
-        this.reservaService.bloquearHora(this.barberoId, fecha, hora, this.motivoBloqueo);
-        this.mostrarModalBloquear = false;
-        this.motivoBloqueo = '';
-        this.slotSeleccionado = null;
-        alert('Hora bloqueada correctamente');
-      } catch (error: any) {
-        alert(error.message || 'Error al bloquear la hora');
-      }
+      this.reservaService.bloquearHora(this.barberoId, fecha, hora, this.motivoBloqueo).subscribe({
+        next: () => {
+          this.mostrarModalBloquear = false;
+          this.motivoBloqueo = '';
+          this.slotSeleccionado = null;
+          alert('Hora bloqueada correctamente.');
+          // Recargar los datos para mostrar el bloqueo
+          this.cargarDatos();
+        },
+        error: (error) => {
+          console.error('Error al bloquear hora:', error);
+          alert(error.message || 'Error al bloquear la hora');
+        }
+      });
     }
   }
 
@@ -208,16 +261,25 @@ export class BarberoComponent implements OnInit {
     const [year, month, day] = fecha.split('-').map(Number);
     const [hour, minute] = hora.split(':').map(Number);
     const fechaHoraReserva = new Date(year, month - 1, day, hour, minute);
-    
+
     if (fechaHoraReserva < ahora) {
       alert('No se puede liberar una hora que ya pasó');
       return;
     }
-    
+
     if (confirm('¿Desea liberar esta hora bloqueada?')) {
-      this.reservaService.liberarHoraPorFechaHora(fecha, hora, this.barberoId);
-      this.slotSeleccionado = null;
-      alert('Hora liberada correctamente');
+      this.reservaService.liberarHoraPorFechaHora(fecha, hora, this.barberoId).subscribe({
+        next: () => {
+          this.slotSeleccionado = null;
+          alert('Hora liberada correctamente');
+          // Recargar los datos para actualizar la vista
+          this.cargarDatos();
+        },
+        error: (error) => {
+          console.error('Error al liberar hora:', error);
+          alert('Error al liberar la hora');
+        }
+      });
     }
   }
 
@@ -286,9 +348,9 @@ export class BarberoComponent implements OnInit {
     try {
       if (typeof window !== 'undefined' && window.localStorage) {
         const eventos = JSON.parse(localStorage.getItem('googleCalendarEventos') || '[]');
-        const evento = eventos.find((e: any) => 
-          e.barbero.email === reserva.barbero && 
-          e.fecha === reserva.fecha && 
+        const evento = eventos.find((e: any) =>
+          e.barbero.email === reserva.barbero &&
+          e.fecha === reserva.fecha &&
           e.hora === reserva.hora
         );
         return evento ? evento.barbero.enlace : null;

@@ -1,16 +1,19 @@
 import { IsNumber, IsNotEmpty, IsString, IsBoolean, IsOptional } from 'class-validator';
+import { Type, Transform } from 'class-transformer';
 
 export class CreatePromocionDto {
   @IsNumber()
   @IsNotEmpty()
+  @Type(() => Number)
   servicioId: number;
 
-  @IsNumber()
   @IsOptional()
+  @Transform(({ value }) => (!value || value === 'null') ? null : Number(value))
   productoId?: number | null;
 
   @IsNumber()
   @IsNotEmpty()
+  @Type(() => Number)
   porcentajeDescuento: number;
 
   @IsString()
@@ -23,6 +26,7 @@ export class CreatePromocionDto {
 
   @IsBoolean()
   @IsOptional()
+  @Transform(({ value }) => value === true || value === 'true' || value === 1 || value === '1')
   activa?: boolean;
 }
 

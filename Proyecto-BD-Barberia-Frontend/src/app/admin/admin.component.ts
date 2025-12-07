@@ -48,6 +48,7 @@ export class AdminComponent implements OnInit {
   mensajeBusquedaBarbero: string = '';
 
   productos: Producto[] = [];
+  productoEnEdicion: Producto | null = null;
   nuevoProducto: Omit<Producto, 'id'> = {
     nombre: '',
     descripcion: '',
@@ -71,7 +72,7 @@ export class AdminComponent implements OnInit {
     private servicioService: ServicioService,
     private barberoService: BarberoService,
     private promocionService: PromocionService
-  ) {}
+  ) { }
 
   cargarBarberos(): void {
     this.barberoService.obtenerBarberos().subscribe(barberos => {
@@ -80,6 +81,7 @@ export class AdminComponent implements OnInit {
   }
 
   ngOnInit(): void {
+    this.productoService.cargarProductos(); // Recargar productos al entrar al admin
     this.productoService.obtenerProductos().subscribe(productos => {
       this.productos = productos;
     });
@@ -92,7 +94,8 @@ export class AdminComponent implements OnInit {
       this.barberos = barberos;
     });
 
-    this.promocionService.obtenerPromociones().subscribe(promociones => {
+    this.promocionService.cargarPromociones(); // Cargar inicial
+    this.promocionService.promociones$.subscribe(promociones => {
       this.promociones = promociones;
     });
 
@@ -110,27 +113,51 @@ export class AdminComponent implements OnInit {
       this.servicioService.agregarServicio({
         ...this.nuevoServicio,
         duracion: 30
+      }).subscribe({
+        next: (servicio) => {
+          console.log('✅ Servicio agregado:', servicio);
+          this.nuevoServicio = {
+            nombre: '',
+            descripcion: '',
+            precio: 0,
+            duracion: 30,
+            activo: true
+          };
+          alert('Servicio agregado correctamente');
+        },
+        error: (error) => {
+          console.error('❌ Error al agregar servicio:', error);
+          alert('Error al agregar el servicio');
+        }
       });
-      this.nuevoServicio = {
-        nombre: '',
-        descripcion: '',
-        precio: 0,
-        duracion: 30,
-        activo: true
-      };
-      alert('Servicio agregado correctamente');
     }
   }
 
   eliminarServicio(id: number): void {
     if (confirm('¿Está seguro de eliminar este servicio?')) {
-      this.servicioService.eliminarServicio(id);
-      alert('Servicio eliminado correctamente');
+      this.servicioService.eliminarServicio(id).subscribe({
+        next: () => {
+          alert('Servicio eliminado correctamente');
+        },
+        error: (error) => {
+          console.error('Error al eliminar servicio:', error);
+          alert('Error al eliminar el servicio');
+        }
+      });
     }
   }
 
   toggleServicioActivo(servicio: Servicio): void {
-    this.servicioService.actualizarServicio(servicio.id, { activo: !servicio.activo });
+    this.servicioService.actualizarServicio(servicio.id, { activo: !servicio.activo }).subscribe({
+      next: () => {
+        servicio.activo = !servicio.activo;
+        console.log(`Servicio ${servicio.id} actualizado. Nuevo estado: ${servicio.activo}`);
+      },
+      error: (error) => {
+        console.error('Error al actualizar estado del servicio:', error);
+        alert('Error al actualizar el estado del servicio');
+      }
+    });
   }
 
   buscarUsuarioParaBarbero(): void {
@@ -141,23 +168,56 @@ export class AdminComponent implements OnInit {
     }
 
     this.mensajeBusquedaBarbero = 'Buscando usuario...';
-    
+
     this.authService.obtenerUsuarioPorEmail(this.emailBusquedaBarbero).subscribe({
       next: (usuario) => {
         console.log('Usuario recibido en componente:', usuario);
+        console.log('🔍 Validación de rol:', {
+          rolRecibido: usuario?.rol,
+          tipoRol: typeof usuario?.rol,
+          UserRoleUSUARIO: UserRole.USUARIO,
+          UserRoleBARBERO: UserRole.BARBERO,
+          esIgualAUSUARIO: usuario?.rol === UserRole.USUARIO,
+          esIgualAUSUARIOString: String(usuario?.rol) === String(UserRole.USUARIO),
+          esAdmin: usuario?.esAdmin,
+          esBarbero: usuario?.esBarbero
+        });
+
         if (!usuario) {
           this.mensajeBusquedaBarbero = 'No se encontró ningún usuario con ese email. El usuario debe registrarse primero.';
           this.usuarioEncontrado = null;
           return;
         }
 
-        if (usuario.rol === UserRole.BARBERO) {
+        // Normalizar el rol para comparación (por si viene con espacios o mayúsculas)
+        const rolNormalizado = String(usuario.rol || '').trim().toLowerCase();
+
+        // Verificar flags directamente (Oracle puede devolver 0/1 como número o string)
+        // Convertir a número para comparación segura
+        const esAdminNum = Number(usuario.esAdmin) || 0;
+        const esBarberoNum = Number(usuario.esBarbero) || 0;
+        const esAdminFlag = esAdminNum === 1 || usuario.esAdmin === true;
+        const esBarberoFlag = esBarberoNum === 1 || usuario.esBarbero === true;
+
+        // Determinar si es barbero (por rol o por flag)
+        const esBarbero = rolNormalizado === 'barbero' ||
+          usuario.rol === UserRole.BARBERO ||
+          esBarberoFlag;
+
+        // Determinar si es usuario/cliente normal (no admin ni barbero)
+        const esUsuario = !esAdminFlag && !esBarberoFlag &&
+          (rolNormalizado === 'usuario' ||
+            usuario.rol === UserRole.USUARIO ||
+            rolNormalizado === '');
+
+        if (esBarbero) {
           this.mensajeBusquedaBarbero = 'Este usuario ya es un barbero.';
           this.usuarioEncontrado = null;
           return;
         }
 
-        if (usuario.rol !== UserRole.USUARIO) {
+        if (!esUsuario) {
+          console.warn('⚠️ Usuario no es cliente normal. Rol:', rolNormalizado, 'EsAdmin:', usuario.esAdmin, 'EsBarbero:', usuario.esBarbero);
           this.mensajeBusquedaBarbero = 'Solo se pueden convertir usuarios (clientes) en barberos.';
           this.usuarioEncontrado = null;
           return;
@@ -171,9 +231,23 @@ export class AdminComponent implements OnInit {
           return;
         }
 
+        // Verificar que el usuario tenga email antes de asignarlo
+        if (!usuario.email || String(usuario.email).trim().length === 0) {
+          console.error('❌ Usuario encontrado pero sin email:', usuario);
+          this.mensajeBusquedaBarbero = 'Error: El usuario encontrado no tiene un email válido.';
+          this.usuarioEncontrado = null;
+          return;
+        }
+
         this.usuarioEncontrado = usuario;
-        this.nuevoBarbero.nombre = usuario.nombre || '';
-        this.nuevoBarbero.email = usuario.email || '';
+        console.log('✅ Usuario asignado correctamente:', {
+          id: this.usuarioEncontrado.id,
+          nombre: this.usuarioEncontrado.nombre,
+          email: this.usuarioEncontrado.email,
+          rol: this.usuarioEncontrado.rol
+        });
+        // No necesitamos asignar nombre y email a nuevoBarbero ya que los campos fueron eliminados
+        // Se usarán directamente desde usuarioEncontrado al agregar el barbero
         this.mensajeBusquedaBarbero = 'Usuario encontrado. Complete los datos adicionales.';
       },
       error: (error) => {
@@ -184,7 +258,7 @@ export class AdminComponent implements OnInit {
           message: error.message,
           error: error.error
         });
-        
+
         if (error.status === 401) {
           this.mensajeBusquedaBarbero = 'Error: No estás autenticado. Por favor, inicia sesión nuevamente.';
         } else if (error.status === 403) {
@@ -197,23 +271,80 @@ export class AdminComponent implements OnInit {
     });
   }
 
-  agregarBarbero(): void {
+  agregarBarbero(form?: any): void {
     if (!this.usuarioEncontrado) {
       alert('Debe buscar un usuario primero');
       return;
     }
 
-    if (!this.nuevoBarbero.email || !this.nuevoBarbero.telefono) {
-      alert('Por favor complete todos los campos requeridos');
+    // Validar formulario si está disponible
+    if (form) {
+      // Marcar todos los campos como touched para mostrar errores visuales
+      Object.keys(form.controls).forEach(key => {
+        const control = form.controls[key];
+        if (control.invalid) {
+          control.markAsTouched();
+        }
+      });
+
+      if (!form.valid) {
+        const camposInvalidos = Object.keys(form.controls)
+          .filter(key => form.controls[key].invalid && form.controls[key].touched)
+          .map(key => {
+            // Mapear nombres técnicos a nombres amigables
+            const nombres: { [key: string]: string } = {
+              'telefonoBarbero': 'Teléfono'
+            };
+            return nombres[key] || key;
+          });
+
+        if (camposInvalidos.length > 0) {
+          alert(`Por favor complete correctamente: ${camposInvalidos.join(', ')}`);
+        } else {
+          alert('Por favor complete todos los campos requeridos');
+        }
+        return;
+      }
+    }
+
+    // Validación adicional manual (por si no hay formulario o como respaldo)
+    const telefonoValido = this.nuevoBarbero.telefono &&
+      String(this.nuevoBarbero.telefono).trim().length > 0;
+
+    if (!telefonoValido) {
+      alert('Por favor ingrese un teléfono válido');
       return;
     }
 
+    // Validar email del usuario encontrado con más detalle
+    const emailValido = this.usuarioEncontrado.email &&
+      String(this.usuarioEncontrado.email).trim().length > 0;
+
+    if (!emailValido) {
+      console.error('❌ Email inválido al agregar barbero:', {
+        usuarioEncontrado: this.usuarioEncontrado,
+        email: this.usuarioEncontrado?.email,
+        tipoEmail: typeof this.usuarioEncontrado?.email
+      });
+      alert('Error: No se encontró el email del usuario. Por favor busque el usuario nuevamente.');
+      return;
+    }
+
+    // Preparar datos del barbero usando el usuario encontrado
+    const datosBarbero = {
+      nombre: this.usuarioEncontrado.nombre || '',
+      email: this.usuarioEncontrado.email || '',
+      telefono: this.nuevoBarbero.telefono,
+      activo: this.nuevoBarbero.activo ?? true,
+      googleCalendarEmail: this.nuevoBarbero.googleCalendarEmail || ''
+    };
+
     // Agregar barbero al backend
-    this.barberoService.agregarBarbero(this.nuevoBarbero).subscribe({
+    this.barberoService.agregarBarbero(datosBarbero).subscribe({
       next: (nuevoBarbero) => {
         // Actualizar lista de barberos
         this.cargarBarberos();
-        
+
         // Limpiar formulario
         this.nuevoBarbero = {
           nombre: '',
@@ -225,7 +356,7 @@ export class AdminComponent implements OnInit {
         this.emailBusquedaBarbero = '';
         this.usuarioEncontrado = null;
         this.mensajeBusquedaBarbero = '';
-        
+
         alert('Barbero agregado correctamente. El usuario ahora tiene rol de barbero.');
       },
       error: (error) => {
@@ -255,37 +386,90 @@ export class AdminComponent implements OnInit {
     this.barberoService.actualizarBarbero(barbero.id, { activo: !barbero.activo });
   }
 
-  agregarProducto(): void {
+  guardarProducto(): void {
     if (this.nuevoProducto.nombre && this.nuevoProducto.descripcion) {
-      this.productoService.agregarProducto(this.nuevoProducto);
-      this.nuevoProducto = {
-        nombre: '',
-        descripcion: '',
-        precio: 0,
-        stock: 0,
-        activo: true
-      };
-      alert('Producto agregado correctamente');
+      if (this.productoEnEdicion) {
+        // Editar existente
+        this.productoService.actualizarProducto(this.productoEnEdicion.id, this.nuevoProducto).subscribe({
+          next: () => {
+            this.cancelarEdicionProducto();
+            alert('Producto actualizado correctamente');
+          },
+          error: (error) => {
+            console.error('Error al actualizar producto:', error);
+            alert('Error al actualizar el producto');
+          }
+        });
+      } else {
+        // Crear nuevo
+        this.productoService.agregarProducto(this.nuevoProducto).subscribe({
+          next: () => {
+            this.cancelarEdicionProducto(); // Limpia el formulario
+            alert('Producto agregado correctamente');
+          },
+          error: (error) => {
+            console.error('Error al agregar producto:', error);
+            alert('Error al agregar el producto');
+          }
+        });
+      }
     }
+  }
+
+  iniciarEdicionProducto(producto: Producto): void {
+    this.productoEnEdicion = producto;
+    this.nuevoProducto = {
+      nombre: producto.nombre,
+      descripcion: producto.descripcion,
+      precio: producto.precio,
+      stock: producto.stock,
+      activo: producto.activo
+    };
+  }
+
+  cancelarEdicionProducto(): void {
+    this.productoEnEdicion = null;
+    this.nuevoProducto = {
+      nombre: '',
+      descripcion: '',
+      precio: 0,
+      stock: 0,
+      activo: true
+    };
   }
 
   eliminarProducto(id: number): void {
     if (confirm('¿Está seguro de eliminar este producto?')) {
-      this.productoService.eliminarProducto(id);
-      alert('Producto eliminado correctamente');
+      this.productoService.eliminarProducto(id).subscribe({
+        next: () => {
+          alert('Producto eliminado correctamente');
+        },
+        error: (error) => {
+          console.error('Error al eliminar producto:', error);
+          alert('Error al eliminar el producto');
+        }
+      });
     }
   }
 
   toggleProductoActivo(producto: Producto): void {
-    this.productoService.actualizarProducto(producto.id, { activo: !producto.activo });
+    this.productoService.actualizarProducto(producto.id, { activo: !producto.activo }).subscribe({
+      next: () => {
+        // El estado se actualiza en el servicio y se emite el nuevo valor
+      },
+      error: (error) => {
+        console.error('Error al actualizar producto:', error);
+        alert('Error al actualizar el producto');
+      }
+    });
   }
 
   agregarPromocion(): void {
-    if (this.nuevaPromocion.servicioId && this.nuevaPromocion.porcentajeDescuento > 0 && 
-        this.nuevaPromocion.porcentajeDescuento <= 100) {
+    if (this.nuevaPromocion.servicioId && this.nuevaPromocion.porcentajeDescuento > 0 &&
+      this.nuevaPromocion.porcentajeDescuento <= 100) {
       const fechaInicio = new Date(this.nuevaPromocion.fechaInicio);
       const fechaFin = new Date(this.nuevaPromocion.fechaFin);
-      
+
       if (fechaFin < fechaInicio) {
         alert('La fecha de fin debe ser posterior a la fecha de inicio');
         return;
@@ -295,30 +479,50 @@ export class AdminComponent implements OnInit {
         ...this.nuevaPromocion,
         fechaInicio: fechaInicio.toISOString(),
         fechaFin: fechaFin.toISOString()
+      }).subscribe({
+        next: () => {
+          this.nuevaPromocion = {
+            servicioId: 0,
+            productoId: null,
+            porcentajeDescuento: 0,
+            fechaInicio: new Date().toISOString().split('T')[0],
+            fechaFin: new Date().toISOString().split('T')[0],
+            activa: true
+          };
+          alert('Promoción agregada correctamente');
+        },
+        error: (error) => {
+          console.error('Error al agregar promoción:', error);
+          alert('Error al agregar la promoción');
+        }
       });
-      
-      this.nuevaPromocion = {
-        servicioId: 0,
-        productoId: null,
-        porcentajeDescuento: 0,
-        fechaInicio: new Date().toISOString().split('T')[0],
-        fechaFin: new Date().toISOString().split('T')[0],
-        activa: true
-      };
-      
-      alert('Promoción agregada correctamente');
     }
   }
 
   eliminarPromocion(id: number): void {
     if (confirm('¿Está seguro de eliminar esta promoción?')) {
-      this.promocionService.eliminarPromocion(id);
-      alert('Promoción eliminada correctamente');
+      this.promocionService.eliminarPromocion(id).subscribe({
+        next: () => {
+          alert('Promoción eliminada correctamente');
+        },
+        error: (error) => {
+          console.error('Error al eliminar promoción:', error);
+          alert('Error al eliminar la promoción');
+        }
+      });
     }
   }
 
   togglePromocionActiva(promocion: Promocion): void {
-    this.promocionService.actualizarPromocion(promocion.id, { activa: !promocion.activa });
+    this.promocionService.actualizarPromocion(promocion.id, { activa: !promocion.activa }).subscribe({
+      next: () => {
+        // El estado se actualiza en el servicio y se emite el nuevo valor
+      },
+      error: (error) => {
+        console.error('Error al actualizar estado de promoción:', error);
+        alert('Error al actualizar el estado de la promoción');
+      }
+    });
   }
 
   obtenerNombreServicio(servicioId: number): string {

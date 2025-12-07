@@ -1,0 +1,6 @@
+-- Verify that RUT column has been dropped from LTEB_BARBERO
+SET PAGESIZE 0;
+SET FEEDBACK OFF;
+SET LINESIZE 200;
+DESC LTEB_BARBERO;
+EXIT;

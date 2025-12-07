@@ -1,29 +1,17 @@
 <div class="admin-container">
   <h1 class="admin-title">Panel de Administración</h1>
-  
+
   <div class="tabs">
-    <button 
-      class="tab-button" 
-      [class.active]="activeTab === 'servicios'"
-      (click)="setActiveTab('servicios')">
+    <button class="tab-button" [class.active]="activeTab === 'servicios'" (click)="setActiveTab('servicios')">
       Gestionar Servicios
     </button>
-    <button 
-      class="tab-button" 
-      [class.active]="activeTab === 'barberos'"
-      (click)="setActiveTab('barberos')">
+    <button class="tab-button" [class.active]="activeTab === 'barberos'" (click)="setActiveTab('barberos')">
       Gestionar Barberos
     </button>
-    <button 
-      class="tab-button" 
-      [class.active]="activeTab === 'productos'"
-      (click)="setActiveTab('productos')">
+    <button class="tab-button" [class.active]="activeTab === 'productos'" (click)="setActiveTab('productos')">
       Gestionar Productos
     </button>
-    <button 
-      class="tab-button" 
-      [class.active]="activeTab === 'promociones'"
-      (click)="setActiveTab('promociones')">
+    <button class="tab-button" [class.active]="activeTab === 'promociones'" (click)="setActiveTab('promociones')">
       Gestionar Promociones
     </button>
   </div>
@@ -35,45 +23,24 @@
       <form (ngSubmit)="agregarServicio()" class="form-card">
         <div class="mb-3">
           <label for="nombreServicio" class="form-label">Nombre del Servicio</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="nombreServicio"
-            [(ngModel)]="nuevoServicio.nombre"
-            name="nombreServicio"
-            required>
+          <input type="text" class="form-control" id="nombreServicio" [(ngModel)]="nuevoServicio.nombre"
+            name="nombreServicio" required>
         </div>
         <div class="mb-3">
           <label for="descripcionServicio" class="form-label">Descripción</label>
-          <textarea 
-            class="form-control" 
-            id="descripcionServicio"
-            [(ngModel)]="nuevoServicio.descripcion"
-            name="descripcionServicio"
-            rows="3"
-            required></textarea>
+          <textarea class="form-control" id="descripcionServicio" [(ngModel)]="nuevoServicio.descripcion"
+            name="descripcionServicio" rows="3" required></textarea>
         </div>
         <div class="mb-3">
           <label for="precioServicio" class="form-label">Precio ($)</label>
-          <input 
-            type="number" 
-            class="form-control" 
-            id="precioServicio"
-            [(ngModel)]="nuevoServicio.precio"
-            name="precioServicio"
-            min="0"
-            required>
+          <input type="number" class="form-control" id="precioServicio" [(ngModel)]="nuevoServicio.precio"
+            name="precioServicio" min="0" required>
           <small class="form-text text-muted">Todos los servicios tienen una duración fija de 30 minutos</small>
         </div>
         <div class="mb-3">
           <div class="form-check">
-            <input 
-              class="form-check-input" 
-              type="checkbox" 
-              id="activoServicio"
-              [(ngModel)]="nuevoServicio.activo"
-              name="activoServicio"
-              checked>
+            <input class="form-check-input" type="checkbox" id="activoServicio" [(ngModel)]="nuevoServicio.activo"
+              name="activoServicio" checked>
             <label class="form-check-label" for="activoServicio">
               Servicio activo (disponible para reservas)
             </label>
@@ -99,10 +66,7 @@
             </div>
           </div>
           <div class="card-actions">
-            <button 
-              class="btn btn-sm" 
-              [class.btn-success]="!servicio.activo"
-              [class.btn-warning]="servicio.activo"
+            <button class="btn btn-sm" [class.btn-success]="!servicio.activo" [class.btn-warning]="servicio.activo"
               (click)="toggleServicioActivo(servicio)">
               {{ servicio.activo ? 'Desactivar' : 'Activar' }}
             </button>
@@ -118,33 +82,23 @@
     <div class="form-section">
       <h2>Agregar Nuevo Barbero</h2>
       <p class="text-muted mb-3">
-        <strong>Importante:</strong> Solo se pueden agregar barberos que ya se hayan registrado como usuarios (clientes). 
+        <strong>Importante:</strong> Solo se pueden agregar barberos que ya se hayan registrado como usuarios
+        (clientes).
         Busque el usuario por su email y luego complete los datos adicionales.
       </p>
-      <form (ngSubmit)="agregarBarbero()" class="form-card">
+      <form #barberoForm="ngForm" (ngSubmit)="agregarBarbero(barberoForm)" class="form-card">
         <div class="mb-3">
           <label for="emailBusquedaBarbero" class="form-label">Buscar Usuario por Email</label>
           <div class="input-group">
-            <input 
-              type="email" 
-              class="form-control" 
-              id="emailBusquedaBarbero"
-              [(ngModel)]="emailBusquedaBarbero"
-              name="emailBusquedaBarbero"
-              placeholder="email@ejemplo.com"
-              [disabled]="!!usuarioEncontrado">
-            <button 
-              type="button" 
-              class="btn btn-primary" 
-              (click)="buscarUsuarioParaBarbero()"
+            <input type="email" class="form-control" id="emailBusquedaBarbero" [(ngModel)]="emailBusquedaBarbero"
+              name="emailBusquedaBarbero" placeholder="email@ejemplo.com" [disabled]="!!usuarioEncontrado">
+            <button type="button" class="btn btn-primary" (click)="buscarUsuarioParaBarbero()"
               [disabled]="!!usuarioEncontrado">
               Buscar
             </button>
           </div>
-          <div *ngIf="mensajeBusquedaBarbero" 
-               [class.text-success]="usuarioEncontrado" 
-               [class.text-danger]="!usuarioEncontrado"
-               class="mt-2">
+          <div *ngIf="mensajeBusquedaBarbero" [class.text-success]="usuarioEncontrado"
+            [class.text-danger]="!usuarioEncontrado" class="mt-2">
             {{ mensajeBusquedaBarbero }}
           </div>
         </div>
@@ -152,57 +106,25 @@
           <strong>Usuario encontrado:</strong> {{ usuarioEncontrado.nombre }} ({{ usuarioEncontrado.email }})
         </div>
         <div class="mb-3">
-          <label for="nombreBarbero" class="form-label">Nombre</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="nombreBarbero"
-            [(ngModel)]="nuevoBarbero.nombre"
-            name="nombreBarbero"
-            [readonly]="!!usuarioEncontrado"
-            required>
-        </div>
-        <div class="mb-3">
-          <label for="emailBarbero" class="form-label">Email</label>
-          <input 
-            type="email" 
-            class="form-control" 
-            id="emailBarbero"
-            [(ngModel)]="nuevoBarbero.email"
-            name="emailBarbero"
-            [readonly]="!!usuarioEncontrado"
-            required>
-        </div>
-        <div class="mb-3">
-          <label for="telefonoBarbero" class="form-label">Teléfono</label>
-          <input 
-            type="tel" 
-            class="form-control" 
-            id="telefonoBarbero"
-            [(ngModel)]="nuevoBarbero.telefono"
-            name="telefonoBarbero"
-            required>
+          <label for="telefonoBarbero" class="form-label">Teléfono <span class="text-danger">*</span></label>
+          <input type="tel" class="form-control" id="telefonoBarbero" [(ngModel)]="nuevoBarbero.telefono"
+            name="telefonoBarbero" #telefonoInput="ngModel" required
+            [class.is-invalid]="telefonoInput.invalid && telefonoInput.touched">
+          <div *ngIf="telefonoInput.invalid && telefonoInput.touched" class="invalid-feedback">
+            El teléfono es obligatorio
+          </div>
         </div>
         <div class="mb-3">
           <label for="googleCalendarEmailBarbero" class="form-label">Email de Google Calendar (opcional)</label>
-          <input 
-            type="email" 
-            class="form-control" 
-            id="googleCalendarEmailBarbero"
-            [(ngModel)]="nuevoBarbero.googleCalendarEmail"
-            name="googleCalendarEmailBarbero"
+          <input type="email" class="form-control" id="googleCalendarEmailBarbero"
+            [(ngModel)]="nuevoBarbero.googleCalendarEmail" name="googleCalendarEmailBarbero"
             placeholder="barbero@gmail.com">
           <small class="form-text text-muted">Email de Google donde se enviarán las citas del barbero</small>
         </div>
         <div class="mb-3">
           <div class="form-check">
-            <input 
-              class="form-check-input" 
-              type="checkbox" 
-              id="activoBarbero"
-              [(ngModel)]="nuevoBarbero.activo"
-              name="activoBarbero"
-              checked>
+            <input class="form-check-input" type="checkbox" id="activoBarbero" [(ngModel)]="nuevoBarbero.activo"
+              name="activoBarbero" checked>
             <label class="form-check-label" for="activoBarbero">
               Barbero activo (disponible para reservas)
             </label>
@@ -221,17 +143,15 @@
             <div class="card-info">
               <span><strong>Email:</strong> {{ barbero.email }}</span>
               <span><strong>Teléfono:</strong> {{ barbero.telefono }}</span>
-              <span *ngIf="barbero.googleCalendarEmail"><strong>Google Calendar:</strong> {{ barbero.googleCalendarEmail }}</span>
+              <span *ngIf="barbero.googleCalendarEmail"><strong>Google Calendar:</strong> {{ barbero.googleCalendarEmail
+                }}</span>
               <span [class.text-success]="barbero.activo" [class.text-danger]="!barbero.activo">
                 <strong>Estado:</strong> {{ barbero.activo ? 'Activo' : 'Inactivo' }}
               </span>
             </div>
           </div>
           <div class="card-actions">
-            <button 
-              class="btn btn-sm" 
-              [class.btn-success]="!barbero.activo"
-              [class.btn-warning]="barbero.activo"
+            <button class="btn btn-sm" [class.btn-success]="!barbero.activo" [class.btn-warning]="barbero.activo"
               (click)="toggleBarberoActivo(barbero)">
               {{ barbero.activo ? 'Desactivar' : 'Activar' }}
             </button>
@@ -245,66 +165,45 @@
   <!-- Tab de Productos -->
   <div *ngIf="activeTab === 'productos'" class="tab-content">
     <div class="form-section">
-      <h2>Agregar Nuevo Producto</h2>
-      <form (ngSubmit)="agregarProducto()" class="form-card">
+      <h2>{{ productoEnEdicion ? 'Editar Producto' : 'Agregar Nuevo Producto' }}</h2>
+      <form (ngSubmit)="guardarProducto()" class="form-card">
         <div class="mb-3">
           <label for="nombreProducto" class="form-label">Nombre del Producto</label>
-          <input 
-            type="text" 
-            class="form-control" 
-            id="nombreProducto"
-            [(ngModel)]="nuevoProducto.nombre"
-            name="nombreProducto"
-            required>
+          <input type="text" class="form-control" id="nombreProducto" [(ngModel)]="nuevoProducto.nombre"
+            name="nombreProducto" required>
         </div>
         <div class="mb-3">
           <label for="descripcionProducto" class="form-label">Descripción</label>
-          <textarea 
-            class="form-control" 
-            id="descripcionProducto"
-            [(ngModel)]="nuevoProducto.descripcion"
-            name="descripcionProducto"
-            rows="3"
-            required></textarea>
+          <textarea class="form-control" id="descripcionProducto" [(ngModel)]="nuevoProducto.descripcion"
+            name="descripcionProducto" rows="3" required></textarea>
         </div>
         <div class="row">
           <div class="col-md-6 mb-3">
             <label for="precioProducto" class="form-label">Precio ($)</label>
-            <input 
-              type="number" 
-              class="form-control" 
-              id="precioProducto"
-              [(ngModel)]="nuevoProducto.precio"
-              name="precioProducto"
-              min="0"
-              required>
+            <input type="number" class="form-control" id="precioProducto" [(ngModel)]="nuevoProducto.precio"
+              name="precioProducto" min="0" required>
           </div>
           <div class="col-md-6 mb-3">
             <label for="stockProducto" class="form-label">Stock</label>
-            <input 
-              type="number" 
-              class="form-control" 
-              id="stockProducto"
-              [(ngModel)]="nuevoProducto.stock"
-              name="stockProducto"
-              min="0"
-              required>
+            <input type="number" class="form-control" id="stockProducto" [(ngModel)]="nuevoProducto.stock"
+              name="stockProducto" min="0" required>
           </div>
         </div>
         <div class="mb-3">
           <div class="form-check">
-            <input 
-              class="form-check-input" 
-              type="checkbox" 
-              id="activoProducto"
-              [(ngModel)]="nuevoProducto.activo"
+            <input class="form-check-input" type="checkbox" id="activoProducto" [(ngModel)]="nuevoProducto.activo"
               name="activoProducto">
             <label class="form-check-label" for="activoProducto">
               Producto activo (disponible para venta)
             </label>
           </div>
         </div>
-        <button type="submit" class="btn btn-primary">Agregar Producto</button>
+        <div class="d-flex gap-2">
+          <button type="submit" class="btn btn-primary">{{ productoEnEdicion ? 'Actualizar Producto' : 'Agregar
+            Producto' }}</button>
+          <button *ngIf="productoEnEdicion" type="button" class="btn btn-secondary"
+            (click)="cancelarEdicionProducto()">Cancelar</button>
+        </div>
       </form>
     </div>
 
@@ -324,10 +223,8 @@
             </div>
           </div>
           <div class="card-actions">
-            <button 
-              class="btn btn-sm" 
-              [class.btn-success]="!producto.activo"
-              [class.btn-warning]="producto.activo"
+            <button class="btn btn-info btn-sm" (click)="iniciarEdicionProducto(producto)">Editar</button>
+            <button class="btn btn-sm" [class.btn-success]="!producto.activo" [class.btn-warning]="producto.activo"
               (click)="toggleProductoActivo(producto)">
               {{ producto.activo ? 'Desactivar' : 'Activar' }}
             </button>
@@ -345,12 +242,8 @@
       <form (ngSubmit)="agregarPromocion()" class="form-card">
         <div class="mb-3">
           <label for="servicioPromocion" class="form-label">Servicio</label>
-          <select 
-            class="form-control" 
-            id="servicioPromocion"
-            [(ngModel)]="nuevaPromocion.servicioId"
-            name="servicioPromocion"
-            required>
+          <select class="form-control" id="servicioPromocion" [(ngModel)]="nuevaPromocion.servicioId"
+            name="servicioPromocion" required>
             <option [value]="0">Seleccione un servicio</option>
             <option *ngFor="let servicio of servicios" [value]="servicio.id">
               {{ servicio.nombre }} - ${{ servicio.precio | number }}
@@ -359,62 +252,38 @@
         </div>
         <div class="mb-3">
           <label for="productoPromocion" class="form-label">Producto (Opcional)</label>
-          <select 
-            class="form-control" 
-            id="productoPromocion"
-            [(ngModel)]="nuevaPromocion.productoId"
+          <select class="form-control" id="productoPromocion" [(ngModel)]="nuevaPromocion.productoId"
             name="productoPromocion">
             <option [value]="null">Solo servicio (sin producto)</option>
             <option *ngFor="let producto of productos" [value]="producto.id">
               {{ producto.nombre }} - ${{ producto.precio | number }}
             </option>
           </select>
-          <small class="form-text text-muted">Si selecciona un producto, el descuento aplicará al servicio y producto juntos</small>
+          <small class="form-text text-muted">Si selecciona un producto, el descuento aplicará al servicio y producto
+            juntos</small>
         </div>
         <div class="mb-3">
           <label for="porcentajeDescuento" class="form-label">Porcentaje de Descuento (%)</label>
-          <input 
-            type="number" 
-            class="form-control" 
-            id="porcentajeDescuento"
-            [(ngModel)]="nuevaPromocion.porcentajeDescuento"
-            name="porcentajeDescuento"
-            min="1"
-            max="100"
-            required>
+          <input type="number" class="form-control" id="porcentajeDescuento"
+            [(ngModel)]="nuevaPromocion.porcentajeDescuento" name="porcentajeDescuento" min="1" max="100" required>
           <small class="form-text text-muted">Ingrese un valor entre 1 y 100</small>
         </div>
         <div class="row">
           <div class="col-md-6 mb-3">
             <label for="fechaInicio" class="form-label">Fecha de Inicio</label>
-            <input 
-              type="date" 
-              class="form-control" 
-              id="fechaInicio"
-              [(ngModel)]="nuevaPromocion.fechaInicio"
-              name="fechaInicio"
-              required>
+            <input type="date" class="form-control" id="fechaInicio" [(ngModel)]="nuevaPromocion.fechaInicio"
+              name="fechaInicio" required>
           </div>
           <div class="col-md-6 mb-3">
             <label for="fechaFin" class="form-label">Fecha de Fin</label>
-            <input 
-              type="date" 
-              class="form-control" 
-              id="fechaFin"
-              [(ngModel)]="nuevaPromocion.fechaFin"
-              name="fechaFin"
+            <input type="date" class="form-control" id="fechaFin" [(ngModel)]="nuevaPromocion.fechaFin" name="fechaFin"
               required>
           </div>
         </div>
         <div class="mb-3">
           <div class="form-check">
-            <input 
-              class="form-check-input" 
-              type="checkbox" 
-              id="activaPromocion"
-              [(ngModel)]="nuevaPromocion.activa"
-              name="activaPromocion"
-              checked>
+            <input class="form-check-input" type="checkbox" id="activaPromocion" [(ngModel)]="nuevaPromocion.activa"
+              name="activaPromocion" checked>
             <label class="form-check-label" for="activaPromocion">
               Promoción activa
             </label>
@@ -442,10 +311,7 @@
             </div>
           </div>
           <div class="card-actions">
-            <button 
-              class="btn btn-sm" 
-              [class.btn-success]="!promocion.activa"
-              [class.btn-warning]="promocion.activa"
+            <button class="btn btn-sm" [class.btn-success]="!promocion.activa" [class.btn-warning]="promocion.activa"
               (click)="togglePromocionActiva(promocion)">
               {{ promocion.activa ? 'Desactivar' : 'Activar' }}
             </button>
@@ -459,5 +325,3 @@
     </div>
   </div>
 </div>
-
-

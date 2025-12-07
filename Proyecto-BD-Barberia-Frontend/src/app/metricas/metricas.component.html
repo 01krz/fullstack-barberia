@@ -32,11 +32,14 @@
           <h3 class="metrica-title">Reservas</h3>
         </div>
         <div class="metrica-body">
-          <div class="metrica-placeholder">
-            <i class="bi bi-bar-chart"></i>
-            <p>Gráfico de reservas por período</p>
-            <small>Los datos se cargarán desde la base de datos</small>
+          <div style="display: block; height: 300px;"
+            *ngIf="isBrowser && barChartData.datasets[0].data.length > 0; else noDataCitas">
+            <canvas baseChart [data]="barChartData" [options]="barChartOptions" [type]="barChartType">
+            </canvas>
           </div>
+          <ng-template #noDataCitas>
+            <p>No hay datos de reservas disponibles.</p>
+          </ng-template>
         </div>
       </div>
 
@@ -47,11 +50,14 @@
           <h3 class="metrica-title">Ingresos</h3>
         </div>
         <div class="metrica-body">
-          <div class="metrica-placeholder">
-            <i class="bi bi-graph-up"></i>
-            <p>Gráfico de ingresos por período</p>
-            <small>Los datos se cargarán desde la base de datos</small>
+          <div style="display: block; height: 300px;"
+            *ngIf="isBrowser && pieChartData.datasets[0].data.length > 0; else noDataIngresos">
+            <canvas baseChart [data]="pieChartData" [options]="pieChartOptions" [type]="pieChartType">
+            </canvas>
           </div>
+          <ng-template #noDataIngresos>
+            <p>No hay datos de ingresos disponibles.</p>
+          </ng-template>
         </div>
       </div>
 
@@ -62,11 +68,14 @@
           <h3 class="metrica-title">Servicios Más Populares</h3>
         </div>
         <div class="metrica-body">
-          <div class="metrica-placeholder">
-            <i class="bi bi-pie-chart"></i>
-            <p>Gráfico de servicios más solicitados</p>
-            <small>Los datos se cargarán desde la base de datos</small>
+          <div style="display: block; height: 300px;"
+            *ngIf="isBrowser && serviciosChartData.datasets[0].data.length > 0; else noDataServicios">
+            <canvas baseChart [data]="serviciosChartData" [options]="serviciosChartOptions" [type]="serviciosChartType">
+            </canvas>
           </div>
+          <ng-template #noDataServicios>
+            <p>No hay datos de servicios disponibles.</p>
+          </ng-template>
         </div>
       </div>
 
@@ -77,11 +86,14 @@
           <h3 class="metrica-title">Rendimiento de Barberos</h3>
         </div>
         <div class="metrica-body">
-          <div class="metrica-placeholder">
-            <i class="bi bi-bar-chart-line"></i>
-            <p>Gráfico de rendimiento por barbero</p>
-            <small>Los datos se cargarán desde la base de datos</small>
+          <div style="display: block; height: 300px;"
+            *ngIf="isBrowser && rankingChartData.datasets[0].data.length > 0; else noDataRanking">
+            <canvas baseChart [data]="rankingChartData" [options]="rankingChartOptions" [type]="rankingChartType">
+            </canvas>
           </div>
+          <ng-template #noDataRanking>
+            <p>No hay datos de ranking disponibles.</p>
+          </ng-template>
         </div>
       </div>
 
@@ -89,14 +101,17 @@
       <div class="metrica-card">
         <div class="metrica-header">
           <i class="bi bi-person-check metrica-icon"></i>
-          <h3 class="metrica-title">Clientes</h3>
+          <h3 class="metrica-title">Clientes Frecuentes</h3>
         </div>
         <div class="metrica-body">
-          <div class="metrica-placeholder">
-            <i class="bi bi-graph-up-arrow"></i>
-            <p>Gráfico de crecimiento de clientes</p>
-            <small>Los datos se cargarán desde la base de datos</small>
+          <div style="display: block; height: 300px;"
+            *ngIf="isBrowser && clientesChartData.datasets[0].data.length > 0; else noDataClientes">
+            <canvas baseChart [data]="clientesChartData" [options]="clientesChartOptions" [type]="clientesChartType">
+            </canvas>
           </div>
+          <ng-template #noDataClientes>
+            <p>No hay datos de clientes disponibles.</p>
+          </ng-template>
         </div>
       </div>
 
@@ -107,11 +122,14 @@
           <h3 class="metrica-title">Productos Vendidos</h3>
         </div>
         <div class="metrica-body">
-          <div class="metrica-placeholder">
-            <i class="bi bi-bar-chart-steps"></i>
-            <p>Gráfico de productos más vendidos</p>
-            <small>Los datos se cargarán desde la base de datos</small>
+          <div style="display: block; height: 300px;"
+            *ngIf="isBrowser && productosChartData.datasets[0].data.length > 0; else noDataProductos">
+            <canvas baseChart [data]="productosChartData" [options]="productosChartOptions" [type]="productosChartType">
+            </canvas>
           </div>
+          <ng-template #noDataProductos>
+            <p>No hay datos de productos disponibles.</p>
+          </ng-template>
         </div>
       </div>
     </div>

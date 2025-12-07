@@ -1,95 +1,57 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { DatabaseService } from '../database/database.service';
+import { UsuariosService } from '../usuarios/usuarios.service';
 import { LoginDto } from './dto/login.dto';
 import { RegistroDto } from './dto/registro.dto';
+import * as oracledb from 'oracledb';
 
 @Injectable()
 export class AuthService {
   constructor(
     private databaseService: DatabaseService,
     private jwtService: JwtService,
-  ) {}
+    private usuariosService: UsuariosService,
+  ) { }
 
   async login(loginDto: LoginDto) {
     const { email, password } = loginDto;
 
-    // Buscar cliente en la base de datos usando LTEB_CLIENTE
-    const query = `
-      SELECT ID_CLIENTE, CORREO, PASSWORD, NOMBRE, APELLIDOS, ES_ADMIN, ES_BARBERO, ACTIVO
-      FROM LTEB_CLIENTE 
-      WHERE CORREO = :email AND (ACTIVO = 1 OR ACTIVO IS NULL)
-    `;
+    // Usar el servicio de usuarios que ya usa SP
+    const user = await this.usuariosService.findByEmail(email);
 
-    const users = await this.databaseService.executeQuery(query, { email });
-
-    if (users.length === 0) {
+    if (!user) {
       throw new UnauthorizedException('Credenciales inválidas');
     }
-
-    const user = users[0];
 
     // Verificar si tiene contraseña
-    if (!user.PASSWORD) {
-      throw new UnauthorizedException('Usuario no tiene contraseña configurada. Por favor, regístrese nuevamente.');
+    if (!user.password) {
+      throw new UnauthorizedException('Usuario no tiene contraseña configurada.');
     }
 
-    // Normalizar contraseñas (trim para eliminar espacios, Oracle puede agregar padding)
     const passwordIngresada = password.trim();
-    const passwordBD = String(user.PASSWORD).trim();
+    const passwordBD = String(user.password).trim();
 
-    // Log de depuración detallado (solo para desarrollo)
-    console.log('Debug login:', {
-      email: email,
-      passwordIngresada: passwordIngresada.substring(0, 3) + '***', // Solo primeros 3 caracteres por seguridad
-      passwordIngresadaLength: passwordIngresada.length,
-      passwordBD: passwordBD.substring(0, 10) + '...', // Primeros 10 caracteres
-      passwordBDLength: passwordBD.length,
-      passwordBDIsHashed: passwordBD.length > 30,
-      passwordsMatch: passwordIngresada === passwordBD
-    });
-
-    // Detectar si la contraseña en BD está hasheada (bcrypt tiene 60 caracteres)
-    // Si es así, necesitamos actualizarla a texto plano
-    if (passwordBD.length > 30) {
-      console.log('⚠️ Usuario tiene contraseña hasheada (60 caracteres). Necesita actualizarse a texto plano.');
-      console.log('Ejecuta este SQL para actualizar la contraseña:');
-      console.log(`UPDATE LTEB_CLIENTE SET PASSWORD = '${passwordIngresada}' WHERE CORREO = '${email}';`);
-      throw new UnauthorizedException('Tu contraseña está en formato antiguo (hasheada). Por favor, ejecuta el SQL para actualizarla o contacta al administrador.');
-    }
-
-    // Verificar contraseña (texto plano para proyecto universitario)
+    // Verificar contraseña (texto plano)
     if (passwordIngresada !== passwordBD) {
-      console.log('❌ Contraseñas no coinciden');
       throw new UnauthorizedException('Credenciales inválidas');
-    }
-
-    console.log('✅ Contraseña correcta');
-
-    // Determinar rol basado en ES_ADMIN y ES_BARBERO
-    let rol = 'usuario';
-    if (user.ES_ADMIN === 1) {
-      rol = 'admin';
-    } else if (user.ES_BARBERO === 1) {
-      rol = 'barbero';
     }
 
     // Generar token JWT
-    const nombreCompleto = `${user.NOMBRE || ''} ${user.APELLIDOS || ''}`.trim() || user.CORREO;
     const payload = {
-      sub: user.ID_CLIENTE,
-      email: user.CORREO,
-      nombre: nombreCompleto,
-      rol: rol,
+      sub: user.id,
+      email: user.email,
+      nombre: user.nombre,
+      rol: user.rol,
     };
 
     return {
       access_token: this.jwtService.sign(payload),
       user: {
-        id: user.ID_CLIENTE,
-        email: user.CORREO,
-        nombre: nombreCompleto,
-        rol: rol,
+        id: user.id,
+        email: user.email,
+        nombre: user.nombre,
+        rol: user.rol,
       },
     };
   }
@@ -97,88 +59,54 @@ export class AuthService {
   async registro(registroDto: RegistroDto) {
     const { nombre, email, password } = registroDto;
 
-    // Verificar si el correo ya existe
-    const checkQuery = `
-      SELECT ID_CLIENTE FROM LTEB_CLIENTE WHERE CORREO = :email
-    `;
-    const existingUsers = await this.databaseService.executeQuery(
-      checkQuery,
-      { email },
-    );
-
-    if (existingUsers.length > 0) {
+    // Verificar si existe
+    const existingUser = await this.usuariosService.findByEmail(email);
+    if (existingUser) {
       throw new UnauthorizedException('Este email ya está registrado');
     }
 
-    // Separar nombre en nombre y apellidos (simplificado)
+    // Separar nombre
     const partesNombre = nombre.trim().split(' ');
     const nombreCliente = partesNombre[0] || nombre;
-    const apellidosCliente = partesNombre.length > 1 
-      ? partesNombre.slice(1).join(' ') 
+    const apellidosCliente = partesNombre.length > 1
+      ? partesNombre.slice(1).join(' ')
       : '';
 
-    // Insertar nuevo cliente usando secuencia (todos empiezan como usuarios normales)
-    const insertQuery = `
-      INSERT INTO LTEB_CLIENTE (
-        ID_CLIENTE, NOMBRE, APELLIDOS, CORREO, PASSWORD, ES_ADMIN, ES_BARBERO, ACTIVO, TELEFONO
-      )
-      VALUES (
-        LTEB_CLIENTE_SEQ.NEXTVAL, :nombre, :apellidos, :email, :password, 0, 0, 1, NULL
-      )
-    `;
-
     try {
-      await this.databaseService.executeInsert(insertQuery, {
-        nombre: nombreCliente,
-        apellidos: apellidosCliente,
-        email,
-        password: password, // Contraseña en texto plano para proyecto universitario
-      });
-
-      // Obtener el cliente recién creado
-      const getUserQuery = `
-        SELECT ID_CLIENTE, CORREO, NOMBRE, APELLIDOS, ES_ADMIN, ES_BARBERO 
-        FROM LTEB_CLIENTE 
-        WHERE CORREO = :email
-        ORDER BY ID_CLIENTE DESC
-        FETCH FIRST 1 ROW ONLY
-      `;
-      const newUsers = await this.databaseService.executeQuery(
-        getUserQuery,
-        { email },
+      // Usar SP_GESTIONAR_CLIENTE
+      const result = await this.databaseService.executeProcedure(
+        'BEGIN SP_GESTIONAR_CLIENTE(p_accion => :accion, p_nombre => :nombre, p_apellidos => :apellidos, p_telefono => :telefono, p_correo => :correo, p_password => :password, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+        {
+          accion: 'C',
+          nombre: nombreCliente,
+          apellidos: apellidosCliente,
+          telefono: null,
+          correo: email,
+          password: password,
+          cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+          id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+        }
       );
 
-      if (newUsers.length === 0) {
-        throw new Error('Error al obtener el cliente creado');
-      }
+      const newId = result.outBinds.id_salida;
 
-      const newUser = newUsers[0];
-      const nombreCompleto = `${newUser.NOMBRE || ''} ${newUser.APELLIDOS || ''}`.trim() || newUser.CORREO;
+      // Obtener usuario creado
+      const newUser = await this.usuariosService.findOne(newId);
 
-      // Determinar rol (nuevos usuarios siempre son 'usuario')
-      const rol = 'usuario';
-
-      // Generar token JWT
       const payload = {
-        sub: newUser.ID_CLIENTE,
-        email: newUser.CORREO,
-        nombre: nombreCompleto,
-        rol: rol,
+        sub: newUser.id,
+        email: newUser.email,
+        nombre: newUser.nombre,
+        rol: newUser.rol,
       };
 
       return {
         access_token: this.jwtService.sign(payload),
-        user: {
-          id: newUser.ID_CLIENTE,
-          email: newUser.CORREO,
-          nombre: nombreCompleto,
-          rol: rol,
-        },
+        user: newUser,
       };
     } catch (error) {
       console.error('Error al registrar usuario:', error);
-      throw new Error('Error al crear la cuenta: ' + (error.message || 'Error desconocido'));
+      throw new Error('Error al crear la cuenta');
     }
   }
 }
-

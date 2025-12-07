@@ -1,111 +1,134 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateProductoDto } from './dto/create-producto.dto';
 import { UpdateProductoDto } from './dto/update-producto.dto';
+import * as oracledb from 'oracledb';
 
 @Injectable()
 export class ProductosService {
-  constructor(private databaseService: DatabaseService) {}
+  constructor(private databaseService: DatabaseService) { }
 
   async create(createProductoDto: CreateProductoDto) {
     const { nombre, descripcion, precio, stock, activo = true } = createProductoDto;
-
-    const query = `
-      INSERT INTO LTEB_PRODUCTO (ID_PRODUCTO, NOMBRE, DESCRIPCION, PRECIO, STOCK)
-      VALUES (:id, :nombre, :descripcion, :precio, :stock)
-    `;
+    const activoNum = activo ? 1 : 0;
 
     try {
-      const newId = await this.databaseService.executeInsertWithId(
-        query,
+      const result = await this.databaseService.executeProcedure(
+        'BEGIN SP_GESTIONAR_PRODUCTO(p_accion => :accion, p_nombre => :nombre, p_descripcion => :descripcion, p_precio => :precio, p_stock => :stock, p_activo => :activo, p_cursor => :cursor, p_id_salida => :id_salida); END;',
         {
+          accion: 'C',
           nombre,
           descripcion,
           precio,
           stock,
-        },
-        'LTEB_PRODUCTO_SEQ',
+          activo: activoNum,
+          cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+          id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+        }
       );
 
-      // Obtener el producto creado
+      const newId = result.outBinds.id_salida;
       return await this.findOne(newId);
     } catch (error) {
       console.error('Error al crear producto:', error);
-      throw new Error('Error al crear el producto');
+      throw new InternalServerErrorException(error.message || 'Error al crear el producto');
     }
   }
 
   async findAll() {
-    const query = `
-      SELECT ID_PRODUCTO as id, NOMBRE as nombre, DESCRIPCION as descripcion, PRECIO as precio, STOCK as stock
-      FROM LTEB_PRODUCTO
-      ORDER BY NOMBRE
-    `;
-    return await this.databaseService.executeQuery(query);
+    const productos = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_PRODUCTO(p_accion => :accion, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+    return this.mapProductos(productos);
   }
 
   async findActive() {
-    const query = `
-      SELECT ID_PRODUCTO as id, NOMBRE as nombre, DESCRIPCION as descripcion, PRECIO as precio, STOCK as stock
-      FROM LTEB_PRODUCTO
-      WHERE STOCK > 0
-      ORDER BY NOMBRE
-    `;
-    return await this.databaseService.executeQuery(query);
+    // SP_GESTIONAR_PRODUCTO 'R' devuelve todos. Filtramos en memoria o creamos acción específica.
+    // Para mantener consistencia con SP unificado, filtramos en memoria por ahora.
+    const all = await this.findAll();
+    return all.filter(p => p.activo === 1 && p.stock > 0);
   }
 
   async findOne(id: number) {
-    const query = `
-      SELECT ID_PRODUCTO as id, NOMBRE as nombre, DESCRIPCION as descripcion, PRECIO as precio, STOCK as stock
-      FROM LTEB_PRODUCTO
-      WHERE ID_PRODUCTO = :id
-    `;
-    const productos = await this.databaseService.executeQuery(query, { id });
-    return productos[0] || null;
+    const productos = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_PRODUCTO(p_accion => :accion, p_id_producto => :id, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        id,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+    const p = productos[0];
+    return p ? this.mapProducto(p) : null;
   }
 
   async update(id: number, updateProductoDto: UpdateProductoDto) {
-    const fields = [];
-    const binds: any = { id };
+    const { nombre, descripcion, precio, stock, activo } = updateProductoDto;
 
-    if (updateProductoDto.nombre !== undefined) {
-      fields.push('NOMBRE = :nombre');
-      binds.nombre = updateProductoDto.nombre;
-    }
-    if (updateProductoDto.descripcion !== undefined) {
-      fields.push('DESCRIPCION = :descripcion');
-      binds.descripcion = updateProductoDto.descripcion;
-    }
-    if (updateProductoDto.precio !== undefined) {
-      fields.push('PRECIO = :precio');
-      binds.precio = updateProductoDto.precio;
-    }
-    if (updateProductoDto.stock !== undefined) {
-      fields.push('STOCK = :stock');
-      binds.stock = updateProductoDto.stock;
-    }
-
-    if (fields.length === 0) {
-      return this.findOne(id);
-    }
-
-    const query = `
-      UPDATE LTEB_PRODUCTO
-      SET ${fields.join(', ')}
-      WHERE ID_PRODUCTO = :id
-    `;
-
-    await this.databaseService.executeUpdate(query, binds);
+    await this.databaseService.executeProcedure(
+      'BEGIN SP_GESTIONAR_PRODUCTO(p_accion => :accion, p_id_producto => :id, p_nombre => :nombre, p_descripcion => :descripcion, p_precio => :precio, p_stock => :stock, p_activo => :activo, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'U',
+        id,
+        nombre,
+        descripcion,
+        precio,
+        stock,
+        activo: activo !== undefined ? (activo ? 1 : 0) : undefined,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      }
+    );
     return this.findOne(id);
   }
 
   async remove(id: number) {
-    const query = `
-      DELETE FROM LTEB_PRODUCTO
-      WHERE ID_PRODUCTO = :id
-    `;
-    await this.databaseService.executeUpdate(query, { id });
+    await this.databaseService.executeProcedure(
+      'BEGIN SP_GESTIONAR_PRODUCTO(p_accion => :accion, p_id_producto => :id, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'D',
+        id,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      }
+    );
     return { message: 'Producto eliminado correctamente' };
+  }
+
+  async updateStock(id: number, cantidad: number) {
+    await this.databaseService.executeProcedure(
+      'BEGIN SP_GESTIONAR_PRODUCTO(p_accion => :accion, p_id_producto => :id, p_stock => :cantidad, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'S',
+        id,
+        cantidad,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      }
+    );
+  }
+
+  private mapProductos(rows: any[]) {
+    return rows.map(r => this.mapProducto(r));
+  }
+
+  private mapProducto(r: any) {
+    return {
+      id: r.ID_PRODUCTO,
+      nombre: r.NOMBRE,
+      descripcion: r.DESCRIPCION,
+      precio: r.PRECIO,
+      stock: r.STOCK,
+      activo: r.ACTIVO
+    };
   }
 }
 

@@ -54,27 +54,50 @@ export class DatabaseService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
-  async executeProcedure(
-    procedureName: string,
+  async executeProcedure<T = any>(
+    statement: string,
     binds: any = {},
-  ): Promise<any> {
+    autoCommit: boolean = true,
+  ): Promise<oracledb.Result<T>> {
     const connection = await this.getConnection();
     try {
-      const result = await connection.execute(
-        `BEGIN ${procedureName}(:result); END;`,
-        {
-          result: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
-          ...binds,
-        },
-      );
+      const result = await connection.execute<T>(statement, binds, {
+        autoCommit: autoCommit,
+        outFormat: oracledb.OUT_FORMAT_OBJECT,
+      });
+      return result;
+    } finally {
+      await connection.close();
+    }
+  }
 
-      const resultSet = result.outBinds.result;
+  // Nuevo método para ejecutar procedimientos que devuelven un cursor
+  async executeCursorProcedure(
+    statement: string,
+    binds: any = {},
+    cursorBindName: string,
+  ): Promise<any[]> {
+    const connection = await this.getConnection();
+    try {
+      const result = await connection.execute(statement, binds, {
+        autoCommit: true,
+        outFormat: oracledb.OUT_FORMAT_OBJECT,
+      });
+
+      const resultSet = result.outBinds[cursorBindName];
+      if (!resultSet) return [];
+
       const rows: any[] = [];
       let row;
-      while ((row = await resultSet.getRow())) {
-        rows.push(row);
+      try {
+        while ((row = await resultSet.getRow())) {
+          rows.push(row);
+        }
+        await resultSet.close();
+      } catch (err) {
+        console.error('Error reading cursor:', err);
+        throw err;
       }
-      await resultSet.close();
       return rows;
     } finally {
       await connection.close();

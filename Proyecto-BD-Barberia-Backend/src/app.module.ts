@@ -8,6 +8,10 @@ import { BarberosModule } from './barberos/barberos.module';
 import { ReservasModule } from './reservas/reservas.module';
 import { ProductosModule } from './productos/productos.module';
 import { PromocionesModule } from './promociones/promociones.module';
+import { BloqueosModule } from './bloqueos/bloqueos.module';
+import { ReportesModule } from './reportes/reportes.module';
+import { EvaluacionesModule } from './evaluaciones/evaluaciones.module';
+import { DireccionModule } from './direccion/direccion.module';
 import { AppController } from './app.controller';
 
 @Module({
@@ -23,8 +27,12 @@ import { AppController } from './app.controller';
     ReservasModule,
     ProductosModule,
     PromocionesModule,
+    BloqueosModule,
+    ReportesModule,
+    EvaluacionesModule,
+    DireccionModule,
   ],
   controllers: [AppController],
 })
-export class AppModule {}
+export class AppModule { }
 

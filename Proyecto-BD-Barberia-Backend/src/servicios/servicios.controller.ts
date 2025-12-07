@@ -17,12 +17,13 @@ import { Roles } from '../auth/decorators/roles.decorator';
 
 @Controller('servicios')
 export class ServiciosController {
-  constructor(private readonly serviciosService: ServiciosService) {}
+  constructor(private readonly serviciosService: ServiciosService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   create(@Body() createServicioDto: CreateServicioDto) {
+    console.log('🔹 [BACKEND] Recibiendo datos para crear servicio:', createServicioDto);
     return this.serviciosService.create(createServicioDto);
   }
 

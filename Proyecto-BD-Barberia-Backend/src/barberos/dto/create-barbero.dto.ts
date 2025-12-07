@@ -19,10 +19,6 @@ export class CreateBarberoDto {
 
   @IsNumber()
   @IsOptional()
-  rut?: number;
-
-  @IsNumber()
-  @IsOptional()
   idDireccion?: number;
 
   @IsNumber()

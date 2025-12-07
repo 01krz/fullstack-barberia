@@ -159,8 +159,9 @@
   text-align: center;
   font-size: 2.5rem;
   font-weight: 700;
-  color: var(--color1, #333);
+  color: #f4a261; /* Color dorado/naranja llamativo */
   margin-bottom: 1rem;
+  text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .section-description {

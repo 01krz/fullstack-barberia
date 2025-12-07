@@ -5,8 +5,15 @@ export class UpdateServicioDto {
   @IsOptional()
   nombre?: string;
 
+  @IsString()
+  @IsOptional()
+  descripcion?: string;
+
   @IsNumber()
   @IsOptional()
   precio?: number;
+
+  @IsOptional()
+  activo?: boolean;
 }
 

@@ -23,28 +23,32 @@ export class ServiciosComponent implements OnInit {
   productos: Producto[] = [];
 
   constructor(
-    public authService: AuthService, 
+    public authService: AuthService,
     private router: Router,
     private servicioService: ServicioService,
     private promocionService: PromocionService,
     private productoService: ProductoService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     // Cargar todos los datos en paralelo para asegurar que estén disponibles
     combineLatest([
       this.servicioService.obtenerServicios(),
-      this.promocionService.obtenerPromociones(),
+      this.promocionService.obtenerPromocionesActivas(),
       this.productoService.obtenerProductos()
     ]).subscribe(([servicios, promociones, productos]) => {
       // Solo mostrar servicios activos
       this.servicios = servicios.filter(s => s.activo);
-      
+
       // Cargar productos
       this.productos = productos;
-      
-      // Cargar promociones activas solo después de que servicios y productos estén cargados
-      this.promociones = this.promocionService.obtenerPromocionesActivas();
+
+      // Cargar promociones activas
+      // Filtrar promociones para asegurarnos de que el servicio asociado existe y está activo
+      this.promociones = promociones.filter(p => this.servicios.some(s => s.id === p.servicioId));
+
+      console.log('DEBUG: Servicios cargados:', this.servicios);
+      console.log('DEBUG: Promociones filtradas:', this.promociones);
     });
   }
 
@@ -109,7 +113,7 @@ export class ServiciosComponent implements OnInit {
     if (promocionId) {
       queryParams.promocionId = promocionId;
     }
-    
+
     this.router.navigate(['/reserva'], { queryParams });
   }
 

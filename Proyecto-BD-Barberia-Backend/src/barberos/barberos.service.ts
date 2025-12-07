@@ -2,99 +2,85 @@ import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateBarberoDto } from './dto/create-barbero.dto';
 import { UpdateBarberoDto } from './dto/update-barbero.dto';
+import * as oracledb from 'oracledb';
 
 @Injectable()
 export class BarberosService {
-  constructor(private databaseService: DatabaseService) {}
+  constructor(private databaseService: DatabaseService) { }
 
   async create(createBarberoDto: CreateBarberoDto) {
-    const { clienteId, email, telefono, rut, idDireccion, idSucursal } = createBarberoDto;
+    const { clienteId, email, telefono, idDireccion, idSucursal } = createBarberoDto;
 
     let cliente: any = null;
     let idClienteFinal: number;
 
-    // Si se proporciona clienteId, buscar por ID
+    // Lógica de validación de cliente (se mantiene en backend por ahora para reutilizar SP_LEER_CLIENTES)
+    // Podría moverse a un SP más complejo en el futuro
     if (clienteId) {
-      const clienteQuery = `
-        SELECT ID_CLIENTE, NOMBRE, APELLIDOS, CORREO
-        FROM LTEB_CLIENTE
-        WHERE ID_CLIENTE = :clienteId
-      `;
-      const clientes = await this.databaseService.executeQuery(clienteQuery, { clienteId });
-      
-      if (clientes.length === 0) {
-        throw new Error('Cliente no encontrado');
-      }
-      cliente = clientes[0];
+      const result = await this.databaseService.executeCursorProcedure(
+        'BEGIN SP_GESTIONAR_CLIENTE(p_accion => :accion, p_id_cliente => :id, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+        {
+          accion: 'R',
+          id: clienteId,
+          cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+          id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+        },
+        'cursor'
+      );
+      if (result.length === 0) throw new Error('Cliente no encontrado');
+      cliente = result[0];
       idClienteFinal = clienteId;
-    } 
-    // Si se proporciona email, buscar cliente por correo
-    else if (email) {
-      const clienteQuery = `
-        SELECT ID_CLIENTE, NOMBRE, APELLIDOS, CORREO
-        FROM LTEB_CLIENTE
-        WHERE CORREO = :email
-      `;
-      const clientes = await this.databaseService.executeQuery(clienteQuery, { email });
-      
-      if (clientes.length === 0) {
-        throw new Error('No existe un usuario con ese email. El usuario debe estar registrado primero como cliente.');
-      }
-      cliente = clientes[0];
+    } else if (email) {
+      const result = await this.databaseService.executeCursorProcedure(
+        'BEGIN SP_GESTIONAR_CLIENTE(p_accion => :accion, p_correo => :email, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+        {
+          accion: 'R',
+          email: email,
+          cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+          id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+        },
+        'cursor'
+      );
+      if (result.length === 0) throw new Error('No existe un usuario con ese email.');
+      cliente = result[0];
       idClienteFinal = cliente.ID_CLIENTE;
 
-      // Verificar si ya es barbero
       const barberoExistente = await this.findByClienteId(idClienteFinal);
-      if (barberoExistente) {
-        throw new Error('Este usuario ya es un barbero');
-      }
-    } 
-    else {
-      throw new Error('Debe proporcionar un clienteId o un email para crear un barbero');
+      if (barberoExistente) throw new Error('Este usuario ya es un barbero');
+    } else {
+      throw new Error('Debe proporcionar un clienteId o un email');
     }
 
-    // Actualizar cliente para marcarlo como barbero
-    const updateClienteQuery = `
-      UPDATE LTEB_CLIENTE
-      SET ES_BARBERO = 1
-      WHERE ID_CLIENTE = :clienteId
-    `;
-    await this.databaseService.executeUpdate(updateClienteQuery, { clienteId: idClienteFinal });
+    // Actualizar flag ES_BARBERO en cliente (esto podría ir en SP_CREAR_BARBERO pero por ahora lo mantenemos separado o asumimos que el SP lo maneja si se actualiza)
+    // El SP_CREAR_BARBERO actual NO actualiza LTEB_CLIENTE, así que mantenemos el update manual o creamos un SP para esto.
+    // Por simplicidad y tiempo, hacemos el update directo o usamos un SP simple si existiera.
+    // Vamos a usar SQL directo para este update pequeño por ahora, o idealmente moverlo al SP.
+    // MANTENEMOS SQL DIRECTO SOLO PARA ESTE UPDATE POR AHORA PARA NO MODIFICAR MAS SPS, 
+    // PERO LO IDEAL SERIA QUE SP_CREAR_BARBERO LO HICIERA.
+    const updateClienteQuery = `UPDATE LTEB_CLIENTE SET ES_BARBERO = 1 WHERE ID_CLIENTE = :id`;
+    await this.databaseService.executeUpdate(updateClienteQuery, { id: idClienteFinal });
 
-    // Separar nombre en apellidos
+    // Separar nombre (solo paterno ahora)
     const partesNombre = (cliente.NOMBRE || '').split(' ');
     const apellidoPaterno = partesNombre.length > 0 ? partesNombre[0] : '';
-    const apellidoMaterno = partesNombre.length > 1 ? partesNombre.slice(1).join(' ') : cliente.APELLIDOS || '';
-
-    // Crear registro en LTEB_BARBERO vinculado al cliente
-    const insertQuery = `
-      INSERT INTO LTEB_BARBERO (
-        ID_BARBERO, ID_CLIENTE, RUT, CORREO, TELEFONO, 
-        APELLIDO_PATERNO, APELLIDO_MATERNO, ID_DIRECCION, ID_SUCURSAL
-      )
-      VALUES (
-        :id, :clienteId, :rut, :correo, :telefono,
-        :apellidoPaterno, :apellidoMaterno, :idDireccion, :idSucursal
-      )
-    `;
+    // Apellido materno ya no se usa
 
     try {
-      const newId = await this.databaseService.executeInsertWithId(
-        insertQuery,
+      const rows = await this.databaseService.executeCursorProcedure(
+        'BEGIN SP_GESTIONAR_BARBERO_V2(p_accion => :accion, p_id_cliente => :clienteId, p_nombre_completo => :nombre, p_correo => :correo, p_telefono => :telefono, p_cursor => :cursor, p_id_salida => :id_salida); END;',
         {
+          accion: 'C',
           clienteId: idClienteFinal,
-          rut: rut || null,
+          nombre: apellidoPaterno, // Usamos apellido paterno como nombre principal en barbero
           correo: cliente.CORREO || email,
           telefono: telefono || null,
-          apellidoPaterno,
-          apellidoMaterno,
-          idDireccion: idDireccion || null,
-          idSucursal: idSucursal || null,
+          cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+          id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
         },
-        'LTEB_BARBERO_SEQ',
+        'cursor'
       );
 
-      return await this.findOne(newId);
+      return this.mapBarberos(rows)[0];
     } catch (error) {
       console.error('Error al crear barbero:', error);
       throw new Error('Error al crear el barbero: ' + (error.message || 'Error desconocido'));
@@ -102,101 +88,100 @@ export class BarberosService {
   }
 
   async findAll() {
-    const query = `
-      SELECT 
-        b.ID_BARBERO as id,
-        b.CORREO as email,
-        b.TELEFONO as telefono,
-        b.APELLIDO_PATERNO || ' ' || b.APELLIDO_MATERNO as nombre,
-        b.RUT as rut,
-        b.ID_DIRECCION as idDireccion,
-        b.ID_SUCURSAL as idSucursal,
-        b.ID_CLIENTE as idCliente,
-        c.NOMBRE || ' ' || c.APELLIDOS as nombreCompleto
-      FROM LTEB_BARBERO b
-      LEFT JOIN LTEB_CLIENTE c ON b.ID_CLIENTE = c.ID_CLIENTE
-      ORDER BY b.APELLIDO_PATERNO, b.APELLIDO_MATERNO
-    `;
-    return await this.databaseService.executeQuery(query);
+    const barberos = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_BARBERO_V2(p_accion => :accion, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+    return this.mapBarberos(barberos);
   }
 
   async findActive() {
-    // LTEB_BARBERO no tiene campo activo, retornamos todos
-    return this.findAll();
+    return this.findAll(); // No hay filtro de activo en SP aun
   }
 
   async findOne(id: number) {
-    const query = `
-      SELECT 
-        b.ID_BARBERO as id,
-        b.CORREO as email,
-        b.TELEFONO as telefono,
-        b.APELLIDO_PATERNO || ' ' || b.APELLIDO_MATERNO as nombre,
-        b.RUT as rut,
-        b.ID_DIRECCION as idDireccion,
-        b.ID_SUCURSAL as idSucursal,
-        b.ID_CLIENTE as idCliente,
-        c.NOMBRE || ' ' || c.APELLIDOS as nombreCompleto
-      FROM LTEB_BARBERO b
-      LEFT JOIN LTEB_CLIENTE c ON b.ID_CLIENTE = c.ID_CLIENTE
-      WHERE b.ID_BARBERO = :id
-    `;
-    const barberos = await this.databaseService.executeQuery(query, { id });
-    return barberos[0] || null;
+    const barberos = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_BARBERO_V2(p_accion => :accion, p_id_barbero => :id, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        id,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+    return barberos.length > 0 ? this.mapBarberos(barberos)[0] : null;
   }
 
   async findByClienteId(clienteId: number) {
-    const query = `
-      SELECT 
-        b.ID_BARBERO as id,
-        b.CORREO as email,
-        b.TELEFONO as telefono,
-        b.APELLIDO_PATERNO || ' ' || b.APELLIDO_MATERNO as nombre,
-        b.RUT as rut,
-        b.ID_DIRECCION as idDireccion,
-        b.ID_SUCURSAL as idSucursal,
-        b.ID_CLIENTE as idCliente
-      FROM LTEB_BARBERO b
-      WHERE b.ID_CLIENTE = :clienteId
-    `;
-    const barberos = await this.databaseService.executeQuery(query, { clienteId });
-    return barberos[0] || null;
+    const barberos = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_BARBERO_V2(p_accion => :accion, p_id_cliente => :id, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        id: clienteId,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+    return barberos.length > 0 ? this.mapBarberos(barberos)[0] : null;
   }
 
   async update(id: number, updateBarberoDto: UpdateBarberoDto) {
-    const fields = [];
-    const binds: any = { id };
+    // SP_ACTUALIZAR_BARBERO solo actualiza correo y telefono por ahora
+    // Si vienen otros campos, se ignoran o deberíamos actualizar el SP.
+    // Asumimos que solo se actualizan esos por ahora.
 
-    if (updateBarberoDto.email !== undefined) {
-      fields.push('CORREO = :email');
-      binds.email = updateBarberoDto.email;
-    }
-    if (updateBarberoDto.telefono !== undefined) {
-      fields.push('TELEFONO = :telefono');
-      binds.telefono = updateBarberoDto.telefono;
-    }
+    const barbero = await this.findOne(id);
+    if (!barbero) return null;
 
-    if (fields.length === 0) {
-      return this.findOne(id);
-    }
+    const rows = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_BARBERO_V2(p_accion => :accion, p_id_barbero => :id, p_correo => :correo, p_telefono => :telefono, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'U',
+        id,
+        correo: updateBarberoDto.email || barbero.email,
+        telefono: updateBarberoDto.telefono || barbero.telefono,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
 
-    const query = `
-      UPDATE LTEB_BARBERO
-      SET ${fields.join(', ')}
-      WHERE ID_BARBERO = :id
-    `;
-
-    await this.databaseService.executeUpdate(query, binds);
-    return this.findOne(id);
+    return this.mapBarberos(rows)[0];
   }
 
   async remove(id: number) {
-    const query = `
-      DELETE FROM LTEB_BARBERO
-      WHERE ID_BARBERO = :id
-    `;
-    await this.databaseService.executeUpdate(query, { id });
+    await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_BARBERO_V2(p_accion => :accion, p_id_barbero => :id, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'D',
+        id,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
     return { message: 'Barbero eliminado correctamente' };
+  }
+
+  private mapBarberos(rows: any[]) {
+    return rows.map(b => ({
+      id: b.ID_BARBERO,
+      email: b.CORREO,
+      telefono: b.TELEFONO,
+      nombre: b.NOMBRE_COMPLETO, // Nombre completo
+      idDireccion: b.ID_DIRECCION,
+      idSucursal: b.ID_SUCURSAL,
+      idCliente: b.ID_CLIENTE,
+      sucursal: b.SUCURSAL_NOMBRE,
+      activo: b.ACTIVO === 1 // Mapear 1 a true, 0 a false
+    }));
   }
 }
 

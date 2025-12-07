@@ -1,22 +1,23 @@
-<!-- Hero Section -->
-<section class="hero-section">
-  <div class="container">
-    <div class="hero-content">
-      <h1 class="hero-title">Reseñas de Clientes</h1>
-      <p class="hero-subtitle">Lo que nuestros clientes dicen sobre nosotros</p>
-    </div>
-  </div>
-</section>
+<div class="container mt-5">
+  <h2 class="text-center mb-4">Lo que dicen nuestros clientes</h2>
 
-<!-- Reseñas Section -->
-<section class="resenas-section">
-  <div class="container">
-    <div class="no-resenas">
-      <div class="no-resenas-content">
-        <i class="bi bi-star"></i>
-        <h3>Próximamente</h3>
-        <p>Las reseñas de nuestros clientes estarán disponibles pronto. ¡Vuelve para ver lo que dicen sobre nuestros servicios!</p>
+  <div class="row">
+    <div class="col-md-4 mb-4" *ngFor="let resena of resenas">
+      <div class="card h-100 shadow-sm">
+        <div class="card-body">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <h5 class="card-title mb-0">{{ resena.clienteNombre || 'Cliente' }}</h5>
+            <div class="text-warning">
+              <i class="bi bi-star-fill" *ngFor="let star of getEstrellas(resena.puntuacion)"></i>
+            </div>
+          </div>
+          <p class="card-text text-muted">"{{ resena.comentario }}"</p>
+        </div>
       </div>
     </div>
+
+    <div class="col-12 text-center" *ngIf="resenas.length === 0">
+      <p class="text-muted">Aún no hay reseñas. ¡Sé el primero en opinar!</p>
+    </div>
   </div>
-</section>
+</div>

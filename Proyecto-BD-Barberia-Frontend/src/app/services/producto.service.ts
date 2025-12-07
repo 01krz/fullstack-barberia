@@ -1,69 +1,29 @@
 import { Injectable } from '@angular/core';
-import { BehaviorSubject, Observable } from 'rxjs';
+import { HttpClient } from '@angular/common/http';
+import { BehaviorSubject, Observable, tap, map, catchError, of } from 'rxjs';
 import { Producto } from '../models/producto.model';
 
 @Injectable({
   providedIn: 'root'
 })
 export class ProductoService {
+  private apiUrl = 'http://127.0.0.1:3000/productos';
   private productosSubject = new BehaviorSubject<Producto[]>([]);
   public productos$ = this.productosSubject.asObservable();
 
-  // Simulación de base de datos (luego se conectará a una BD real)
-  private productos: Producto[] = [
-    {
-      id: 1,
-      nombre: 'Pomada para Cabello',
-      descripcion: 'Pomada de alta fijación para peinados modernos',
-      precio: 8000,
-      stock: 50,
-      activo: true
-    },
-    {
-      id: 2,
-      nombre: 'Aceite para Barba',
-      descripcion: 'Aceite nutritivo para el cuidado de la barba',
-      precio: 12000,
-      stock: 30,
-      activo: true
-    },
-    {
-      id: 3,
-      nombre: 'Champú Profesional',
-      descripcion: 'Champú para cabello y cuero cabelludo',
-      precio: 10000,
-      stock: 40,
-      activo: true
-    }
-  ];
-
-  constructor() {
-    // Cargar productos desde localStorage si existen
-    this.cargarDesdeLocalStorage();
-    this.productosSubject.next([...this.productos]);
+  constructor(private http: HttpClient) {
+    this.cargarProductos();
   }
 
-  private guardarEnLocalStorage(): void {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        localStorage.setItem('productos', JSON.stringify(this.productos));
+  cargarProductos(): void {
+    this.http.get<Producto[]>(this.apiUrl).subscribe({
+      next: (productos) => {
+        this.productosSubject.next(productos);
+      },
+      error: (error) => {
+        console.error('Error al cargar productos:', error);
       }
-    } catch (error) {
-      console.warn('Error al guardar productos en localStorage:', error);
-    }
-  }
-
-  private cargarDesdeLocalStorage(): void {
-    try {
-      if (typeof window !== 'undefined' && window.localStorage) {
-        const productosGuardados = localStorage.getItem('productos');
-        if (productosGuardados) {
-          this.productos = JSON.parse(productosGuardados);
-        }
-      }
-    } catch (error) {
-      console.warn('Error al cargar productos desde localStorage:', error);
-    }
+    });
   }
 
   obtenerProductos(): Observable<Producto[]> {
@@ -71,50 +31,67 @@ export class ProductoService {
   }
 
   obtenerProductosActivos(): Producto[] {
-    return this.productos.filter(p => p.activo && p.stock > 0);
+    // Idealmente esto debería ser un endpoint filtrado en el backend
+    // Por ahora filtramos localmente lo que ya tenemos cargado
+    return this.productosSubject.value.filter(p => p.stock > 0);
+    // Nota: El backend tiene /activos, podríamos usar eso también:
+    // return this.http.get<Producto[]>(`${this.apiUrl}/activos`);
+    // Pero para mantener la compatibilidad con el componente que espera un array síncrono (si lo hay),
+    // o si el componente usa Observables, mejor devolver Observable.
+    // Revisando el uso en reserva.component.ts:
+    // this.productoService.obtenerProductosActivos().forEach(...)
+    // El componente espera un array síncrono.
+    // Para no romper el componente AHORA, devolvemos lo que tenemos en memoria.
+  }
+
+  // Método asíncrono para obtener activos (recomendado para refactorizar después)
+  obtenerProductosActivosAsync(): Observable<Producto[]> {
+    return this.http.get<Producto[]>(`${this.apiUrl}/activos`);
   }
 
   obtenerProductoPorId(id: number): Producto | undefined {
-    return this.productos.find(p => p.id === id);
+    return this.productosSubject.value.find(p => p.id === id);
   }
 
-  agregarProducto(producto: Omit<Producto, 'id'>): Producto {
-    const nuevoId = this.productos.length > 0 
-      ? Math.max(...this.productos.map(p => p.id)) + 1 
-      : 1;
-    
-    const nuevoProducto: Producto = {
-      ...producto,
-      id: nuevoId
-    };
-    
-    this.productos.push(nuevoProducto);
-    this.productosSubject.next([...this.productos]);
-    this.guardarEnLocalStorage();
-    
-    return nuevoProducto;
+  agregarProducto(producto: Omit<Producto, 'id'>): Observable<Producto> {
+    return this.http.post<Producto>(this.apiUrl, producto).pipe(
+      tap(nuevoProducto => {
+        const actuales = this.productosSubject.value;
+        this.productosSubject.next([...actuales, nuevoProducto]);
+      })
+    );
   }
 
-  actualizarProducto(id: number, producto: Partial<Producto>): boolean {
-    const index = this.productos.findIndex(p => p.id === id);
-    if (index !== -1) {
-      this.productos[index] = { ...this.productos[index], ...producto };
-      this.productosSubject.next([...this.productos]);
-      this.guardarEnLocalStorage();
-      return true;
-    }
-    return false;
+  actualizarProducto(id: number, producto: Partial<Producto>): Observable<Producto> {
+    return this.http.patch<Producto>(`${this.apiUrl}/${id}`, producto).pipe(
+      tap(productoActualizado => {
+        const actuales = this.productosSubject.value;
+        const index = actuales.findIndex(p => p.id === id);
+        if (index !== -1) {
+          actuales[index] = { ...actuales[index], ...productoActualizado }; // Merge simple
+          // O mejor, reemplazar con lo que devuelve el backend si devuelve el objeto completo
+          if (productoActualizado && productoActualizado.id) {
+            actuales[index] = productoActualizado;
+          }
+          this.productosSubject.next([...actuales]);
+        }
+      })
+    );
   }
 
-  eliminarProducto(id: number): boolean {
-    const index = this.productos.findIndex(p => p.id === id);
-    if (index !== -1) {
-      this.productos.splice(index, 1);
-      this.productosSubject.next([...this.productos]);
-      this.guardarEnLocalStorage();
-      return true;
-    }
-    return false;
+  eliminarProducto(id: number): Observable<boolean> {
+    return this.http.delete(`${this.apiUrl}/${id}`).pipe(
+      map(() => {
+        const actuales = this.productosSubject.value;
+        const filtrados = actuales.filter(p => p.id !== id);
+        this.productosSubject.next(filtrados);
+        return true;
+      }),
+      catchError(error => {
+        console.error('Error al eliminar producto:', error);
+        return of(false);
+      })
+    );
   }
 }
 

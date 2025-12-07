@@ -1,0 +1,93 @@
+<div class="container mt-5">
+    <h2 class="mb-4">Mis Reservas</h2>
+
+    <!-- Próximas Citas -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h3 class="h5 mb-0">Próximas Citas</h3>
+        </div>
+        <div class="card-body">
+            <div *ngIf="reservasFuturas.length === 0" class="text-muted">
+                No tienes citas próximas.
+            </div>
+            <div *ngFor="let reserva of reservasFuturas" class="border-bottom py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">{{ reserva.servicio }}</h5>
+                        <p class="mb-1"><strong>Barbero:</strong> {{ reserva.barbero }}</p>
+                        <small class="text-muted">
+                            <i class="bi bi-calendar"></i> {{ reserva.fecha | date:'fullDate' }} -
+                            <i class="bi bi-clock"></i> {{ reserva.hora }}
+                        </small>
+                    </div>
+                    <span class="badge bg-success">{{ reserva.estado }}</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Historial -->
+    <div class="card">
+        <div class="card-header bg-secondary text-white">
+            <h3 class="h5 mb-0">Historial</h3>
+        </div>
+        <div class="card-body">
+            <div *ngIf="reservasPasadas.length === 0" class="text-muted">
+                No tienes citas pasadas.
+            </div>
+            <div *ngFor="let reserva of reservasPasadas" class="border-bottom py-3">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h5 class="mb-1">{{ reserva.servicio }}</h5>
+                        <p class="mb-1"><strong>Barbero:</strong> {{ reserva.barbero }}</p>
+                        <small class="text-muted">
+                            {{ reserva.fecha | date:'shortDate' }} - {{ reserva.hora }}
+                        </small>
+                    </div>
+                    <div>
+                        <button class="btn btn-outline-warning btn-sm" (click)="abrirModalCalificar(reserva)">
+                            <i class="bi bi-star"></i> Calificar
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal Calificar -->
+<div class="modal" tabindex="-1" [class.d-block]="mostrarModalCalificar" style="background-color: rgba(0,0,0,0.5)">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Calificar Servicio</h5>
+                <button type="button" class="btn-close" (click)="cerrarModalCalificar()"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3 text-center">
+                    <label class="form-label d-block">Puntuación</label>
+                    <div class="rating">
+                        <i class="bi" [class.bi-star-fill]="puntuacion >= 1" [class.bi-star]="puntuacion < 1"
+                            (click)="puntuacion = 1"></i>
+                        <i class="bi" [class.bi-star-fill]="puntuacion >= 2" [class.bi-star]="puntuacion < 2"
+                            (click)="puntuacion = 2"></i>
+                        <i class="bi" [class.bi-star-fill]="puntuacion >= 3" [class.bi-star]="puntuacion < 3"
+                            (click)="puntuacion = 3"></i>
+                        <i class="bi" [class.bi-star-fill]="puntuacion >= 4" [class.bi-star]="puntuacion < 4"
+                            (click)="puntuacion = 4"></i>
+                        <i class="bi" [class.bi-star-fill]="puntuacion >= 5" [class.bi-star]="puntuacion < 5"
+                            (click)="puntuacion = 5"></i>
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label for="comentario" class="form-label">Comentario</label>
+                    <textarea class="form-control" id="comentario" rows="3" [(ngModel)]="comentario"></textarea>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" (click)="cerrarModalCalificar()">Cancelar</button>
+                <button type="button" class="btn btn-primary" (click)="enviarCalificacion()">Enviar</button>
+            </div>
+        </div>
+    </div>
+</div>

@@ -30,11 +30,56 @@ export class GalleryService {
           if (images.length > 0) {
             this.nextId = Math.max(...images.map((img: GalleryImage) => img.id)) + 1;
           }
+        } else {
+          // Si no hay imágenes guardadas, cargar imágenes de ejemplo
+          this.loadDefaultImages();
         }
       }
     } catch (error) {
       console.error('Error al cargar imágenes de la galería:', error);
     }
+  }
+
+  private loadDefaultImages(): void {
+    // Imágenes de ejemplo desde la carpeta assets
+    // IMPORTANTE: Coloca tus imágenes en: src/assets/images/gallery/
+    const defaultImages: GalleryImage[] = [
+      {
+        id: 1,
+        url: 'assets/images/gallery/Low Fade - Antes.jpeg',
+        title: 'Low Fade - Antes',
+        description: 'Cliente antes del corte',
+        uploadDate: new Date(),
+        uploadedBy: 'admin'
+      },
+      {
+        id: 2,
+        url: 'assets/images/gallery/Low Fade - Despues.jpeg',
+        title: 'Low Fade - Después',
+        description: 'Resultado final del corte',
+        uploadDate: new Date(),
+        uploadedBy: 'admin'
+      },
+      {
+        id: 3,
+        url: 'assets/images/gallery/Tupper Fade - Antes.jpeg',
+        title: 'Tupper Fade - Antes',
+        description: 'Cliente antes del corte',
+        uploadDate: new Date(),
+        uploadedBy: 'admin'
+      },
+      {
+        id: 4,
+        url: 'assets/images/gallery/Tupper Fade - Despues.jpeg',
+        title: 'Tupper Fade - Después',
+        description: 'Resultado final del corte',
+        uploadDate: new Date(),
+        uploadedBy: 'admin'
+      }
+    ];
+
+    this.nextId = 5; // Siguiente ID después de las imágenes por defecto
+    this.imagesSubject.next(defaultImages);
   }
 
   private saveImages(images: GalleryImage[]): void {
@@ -59,7 +104,7 @@ export class GalleryService {
   addImage(file: File, title?: string, description?: string, uploadedBy?: string): Promise<GalleryImage> {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
-      
+
       reader.onload = (e: ProgressEvent<FileReader>) => {
         const imageUrl = e.target?.result as string;
         const newImage: GalleryImage = {

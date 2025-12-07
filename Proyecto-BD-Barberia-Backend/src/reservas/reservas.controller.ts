@@ -16,17 +16,19 @@ import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('reservas')
 export class ReservasController {
-  constructor(private readonly reservasService: ReservasService) {}
+  constructor(private readonly reservasService: ReservasService) { }
 
   @Post()
   @UseGuards(JwtAuthGuard)
   create(@Body() createReservaDto: CreateReservaDto) {
+    console.log('DEBUG: Received createReservaDto:', JSON.stringify(createReservaDto, null, 2));
     return this.reservasService.create(createReservaDto);
   }
 
   @Get()
-  @UseGuards(JwtAuthGuard)
   findAll(@Query('barberoId') barberoId?: string, @Query('clienteId') clienteId?: string) {
+    // Permitir consultas públicas por barberoId para que los invitados puedan ver disponibilidad
+    // Las consultas por clienteId o todas las reservas requieren autenticación (se valida en el frontend)
     if (barberoId) {
       return this.reservasService.findByBarbero(+barberoId);
     }

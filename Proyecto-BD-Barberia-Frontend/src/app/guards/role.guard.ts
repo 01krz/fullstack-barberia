@@ -10,15 +10,15 @@ export const roleGuard = (allowedRoles: UserRole[]): CanActivateFn => {
       const router = inject(Router);
 
       const user = authService.getCurrentUser();
-      
+
       if (user && allowedRoles.includes(user.rol)) {
         return true;
       }
 
-      // Permitir acceso temporalmente para que las vistas funcionen
-      // TODO: Habilitar cuando se conecte a BD
-      // router.navigate(['/home']);
-      return true;
+      // Redirigir si no tiene permisos
+      console.warn(`Acceso denegado. Rol usuario: ${user?.rol}, Roles permitidos: ${allowedRoles}`);
+      router.navigate(['/home']);
+      return false;
     } catch (error) {
       console.warn('Error en roleGuard:', error);
       return true;

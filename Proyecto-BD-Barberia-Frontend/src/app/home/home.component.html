@@ -1,8 +1,7 @@
-
 <!-- Hero Section -->
 <section class="hero-section">
   <div class="container">
-    <h1 class="hero-title">Lucas Polla Barbería</h1>
+    <h1 class="hero-title">Ukid's Barber Shop</h1>
     <p class="hero-subtitle">Estilo, tradición y excelencia en cada corte</p>
     <div class="hero-buttons">
       <a routerLink="/servicios" class="btn btn-primary btn-lg">Ver Servicios</a>
@@ -37,11 +36,11 @@
             </h3>
             <p class="promocion-text">
               <ng-container *ngIf="obtenerProductoPorPromocion(promocion) as producto">
-                Llevando <strong>{{ servicio.nombre }}</strong> + <strong>{{ producto.nombre }}</strong> 
+                Llevando <strong>{{ servicio.nombre }}</strong> + <strong>{{ producto.nombre }}</strong>
                 obtienes un <strong>{{ promocion.porcentajeDescuento }}% de descuento</strong> en el total.
               </ng-container>
               <ng-container *ngIf="!obtenerProductoPorPromocion(promocion)">
-                Reservando <strong>{{ servicio.nombre }}</strong> obtienes un 
+                Reservando <strong>{{ servicio.nombre }}</strong> obtienes un
                 <strong>{{ promocion.porcentajeDescuento }}% de descuento</strong>.
               </ng-container>
             </p>
@@ -62,7 +61,8 @@
   <div class="container">
     <h2 class="section-title">Bienvenido a Nuestra Barbería</h2>
     <p class="section-description">
-      Explora nuestros servicios, conoce nuestra historia y descubre por qué somos la mejor opción para tu cuidado personal.
+      Explora nuestros servicios, conoce nuestra historia y descubre por qué somos la mejor opción para tu cuidado
+      personal.
     </p>
 
     <!-- Tarjetas de Secciones -->
@@ -72,7 +72,8 @@
         <div class="seccion-icon">✂️</div>
         <h3 class="seccion-title">Servicios</h3>
         <p class="seccion-description">
-          Descubre nuestra amplia gama de servicios profesionales. Desde cortes modernos hasta tratamientos especializados.
+          Descubre nuestra amplia gama de servicios profesionales. Desde cortes modernos hasta tratamientos
+          especializados.
         </p>
         <div class="seccion-preview" *ngIf="serviciosDestacados.length > 0">
           <p class="preview-title"><strong>Servicios destacados:</strong></p>
@@ -140,8 +141,7 @@
     <div class="info-extra">
       <div class="info-card">
         <h4>Horarios de Atención</h4>
-        <p><strong>Lunes a Sábado:</strong> 9:00 AM - 8:00 PM</p>
-        <p><strong>Domingo:</strong> Cerrado</p>
+        <p><strong>Lunes a Domingo:</strong> 9:00 AM - 8:00 PM</p>
       </div>
       <div class="info-card">
         <h4>¿Necesitas Ayuda?</h4>

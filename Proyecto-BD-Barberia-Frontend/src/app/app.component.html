@@ -1,217 +1,218 @@
-
-
-
 <!-- Barra de navegación -->
 <div class="general-styles">
   <nav class="navbar navbar-expand-lg" data-bs-theme="dark" *ngIf="!isLoginPage">
-  <div class="container-fluid">
-    <a class="navbar-brand" routerLink="home">Barberia</a>
-    <button class="navbar-toggler" type="button" (click)="toggleMenu()" aria-controls="navbarNav" aria-expanded="false" aria-label="Toggle navigation">
-      <span class="navbar-toggler-icon"></span>
-    </button>
-    <div class="collapse navbar-collapse" id="navbarNav">
-      <ul class="navbar-nav me-auto mb-2 mb-lg-0">
-        <!-- Opciones para USUARIO e INVITADO -->
-        <ng-container *ngIf="showClientOptions()">
-          <li class="nav-item">
-            <a class="nav-link" routerLink="home" [ngClass]="{active: menuOption == 'home'}" 
-            (click)="onOption('home')">Inicio</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" routerLink="servicios" [ngClass]="{active: menuOption == 'servicios'}" 
-            (click)="onOption('servicios')">Servicios</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" routerLink="acerca-de" [ngClass]="{active: menuOption == 'acerca-de'}" 
-            (click)="onOption('acerca-de')">Acerca de</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" routerLink="galeria" [ngClass]="{active: menuOption == 'galeria'}" 
-            (click)="onOption('galeria')">Galeria</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" routerLink="resenas" [ngClass]="{active: menuOption == 'resenas'}" 
-            (click)="onOption('resenas')">Reseñas</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" routerLink="direccion" [ngClass]="{active: menuOption == 'direccion'}" 
-            (click)="onOption('direccion')">Dirección</a>
-          </li>
-        </ng-container>
+    <div class="container-fluid">
+      <a class="navbar-brand" routerLink="home">Barberia</a>
+      <button class="navbar-toggler" type="button" (click)="toggleMenu()" aria-controls="navbarNav"
+        aria-expanded="false" aria-label="Toggle navigation">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="navbarNav">
+        <ul class="navbar-nav me-auto mb-2 mb-lg-0">
+          <!-- Opciones para USUARIO e INVITADO -->
+          <ng-container *ngIf="showClientOptions()">
+            <li class="nav-item">
+              <a class="nav-link" routerLink="home" [ngClass]="{active: menuOption == 'home'}"
+                (click)="onOption('home')">Inicio</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="servicios" [ngClass]="{active: menuOption == 'servicios'}"
+                (click)="onOption('servicios')">Servicios</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="acerca-de" [ngClass]="{active: menuOption == 'acerca-de'}"
+                (click)="onOption('acerca-de')">Acerca de</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="galeria" [ngClass]="{active: menuOption == 'galeria'}"
+                (click)="onOption('galeria')">Galeria</a>
+            </li>
+            <li class="nav-item" *ngIf="!isInvitado()">
+              <a class="nav-link" routerLink="mis-reservas" [ngClass]="{active: menuOption == 'mis-reservas'}"
+                (click)="onOption('mis-reservas')">Mis Reservas</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="resenas" [ngClass]="{active: menuOption == 'resenas'}"
+                (click)="onOption('resenas')">Reseñas</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="direccion" [ngClass]="{active: menuOption == 'direccion'}"
+                (click)="onOption('direccion')">Dirección</a>
+            </li>
+          </ng-container>
 
-        <!-- Opciones para BARBERO -->
-        <ng-container *ngIf="isBarbero()">
-          <li class="nav-item">
-            <a class="nav-link" routerLink="barbero" [ngClass]="{active: menuOption == 'barbero'}" 
-            (click)="onOption('barbero')">Mis Reservas</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" routerLink="resenas" [ngClass]="{active: menuOption == 'resenas'}" 
-            (click)="onOption('resenas')">Reseñas</a>
-          </li>
-        </ng-container>
+          <!-- Opciones para BARBERO -->
+          <ng-container *ngIf="isBarbero()">
+            <li class="nav-item">
+              <a class="nav-link" routerLink="barbero" [ngClass]="{active: menuOption == 'barbero'}"
+                (click)="onOption('barbero')">Mis Reservas</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="resenas" [ngClass]="{active: menuOption == 'resenas'}"
+                (click)="onOption('resenas')">Reseñas</a>
+            </li>
+          </ng-container>
 
-        <!-- Opciones para ADMIN -->
-        <ng-container *ngIf="isAdmin()">
-          <li class="nav-item">
-            <a class="nav-link" routerLink="admin" [ngClass]="{active: menuOption == 'admin'}" 
-            (click)="onOption('admin')">Administración</a>
-          </li>
-          <li class="nav-item">
-            <a class="nav-link" routerLink="metricas" [ngClass]="{active: menuOption == 'metricas'}" 
-            (click)="onOption('metricas')">Métricas</a>
-          </li>
-        </ng-container>
-      </ul>
-      <div class="d-flex align-items-center gap-2">
-        <span class="text-light me-2" *ngIf="currentUser$ | async as user">
-          {{ user.nombre }}
-        </span>
-        <button class="btn btn-outline-light" type="button" (click)="logout()" *ngIf="authService.isAuthenticated() && !isInvitado()">Cerrar Sesión</button>
-        <button class="btn btn-outline-light" type="button" routerLink="login" *ngIf="isInvitado()">Login</button>
-      </div>
-    </div>
-  </div>
-</nav>
-
-
-
-
-
-
-
-
-
-<!-- Menú lateral deslizable desde la derecha -->
-<div class="sidebar-overlay" [class.active]="isMenuOpen" (click)="closeMenu()" *ngIf="!isLoginPage"></div>
-<div class="sidebar-menu" [class.active]="isMenuOpen" *ngIf="!isLoginPage">
-  <div class="sidebar-header">
-    <h3>Menú</h3>
-    <button class="close-btn" (click)="closeMenu()" aria-label="Cerrar menú">&times;</button>
-  </div>
-  <ul class="sidebar-nav">
-    <li class="sidebar-item" *ngIf="currentUser$ | async as user">
-      <div class="sidebar-user-info">
-        <strong>{{ user.nombre }}</strong>
-        <small>{{ user.rol | titlecase }}</small>
-      </div>
-    </li>
-    
-    <!-- Opciones para USUARIO e INVITADO -->
-    <ng-container *ngIf="showClientOptions()">
-      <li class="sidebar-item">
-        <a class="sidebar-link" routerLink="home" (click)="onOption('home'); closeMenu()">Inicio</a>
-      </li>
-      <li class="sidebar-item">
-        <a class="sidebar-link" routerLink="servicios" [ngClass]="{active: menuOption == 'servicios'}" 
-        (click)="onOption('servicios'); closeMenu()">Servicios</a>
-      </li>
-      <li class="sidebar-item">
-        <a class="sidebar-link" routerLink="acerca-de" [ngClass]="{active: menuOption == 'acerca-de'}" 
-        (click)="onOption('acerca-de'); closeMenu()">Acerca de</a>
-      </li>
-      <li class="sidebar-item">
-        <a class="sidebar-link" routerLink="galeria" [ngClass]="{active: menuOption == 'galeria'}" 
-        (click)="onOption('galeria'); closeMenu()">Galeria</a>
-      </li>
-      <li class="sidebar-item">
-        <a class="sidebar-link" routerLink="resenas" [ngClass]="{active: menuOption == 'resenas'}" 
-        (click)="onOption('resenas'); closeMenu()">Reseñas</a>
-      </li>
-      <li class="sidebar-item">
-        <a class="sidebar-link" routerLink="direccion" [ngClass]="{active: menuOption == 'direccion'}" 
-        (click)="onOption('direccion'); closeMenu()">Dirección</a>
-      </li>
-    </ng-container>
-
-    <!-- Opciones para BARBERO -->
-    <ng-container *ngIf="isBarbero()">
-      <li class="sidebar-item">
-        <a class="sidebar-link" routerLink="barbero" [ngClass]="{active: menuOption == 'barbero'}" 
-        (click)="onOption('barbero'); closeMenu()">Mis Reservas</a>
-      </li>
-      <li class="sidebar-item">
-        <a class="sidebar-link" routerLink="resenas" [ngClass]="{active: menuOption == 'resenas'}" 
-        (click)="onOption('resenas'); closeMenu()">Reseñas</a>
-      </li>
-    </ng-container>
-
-    <!-- Opciones para ADMIN -->
-    <ng-container *ngIf="isAdmin()">
-      <li class="sidebar-item">
-        <a class="sidebar-link" routerLink="admin" [ngClass]="{active: menuOption == 'admin'}" 
-        (click)="onOption('admin'); closeMenu()">Administración</a>
-      </li>
-      <li class="sidebar-item">
-        <a class="sidebar-link" routerLink="metricas" [ngClass]="{active: menuOption == 'metricas'}" 
-        (click)="onOption('metricas'); closeMenu()">Métricas</a>
-      </li>
-    </ng-container>
-
-    <!-- Cerrar Sesión para usuarios autenticados (no invitados) -->
-    <li class="sidebar-item" *ngIf="authService.isAuthenticated() && !isInvitado()">
-      <a class="sidebar-link" (click)="logout()">Cerrar Sesión</a>
-    </li>
-    <!-- Login para invitados -->
-    <li class="sidebar-item" *ngIf="isInvitado()">
-      <a class="sidebar-link" routerLink="login" (click)="closeMenu()">Login</a>
-    </li>
-  </ul>
-</div>
-
-<router-outlet></router-outlet>
-
-<!-- Footer -->
-<footer class="footer" *ngIf="!isLoginPage">
-  <div class="container">
-    <div class="row">
-      <div class="col-md-4 col-sm-6 mb-4 mb-md-0">
-        <h5 class="footer-title">Contacto</h5>
-        <ul class="footer-list">
-          <li>
-            <i class="bi bi-envelope"></i>
-            <span>infobarberia.com</span>
-          </li>
-          <li>
-            <i class="bi bi-telephone"></i>
-            <span>+34 123 456 789</span>
-          </li>
-          <li>
-            <i class="bi bi-geo-alt"></i>
-            <span>Calle Principal 123, Madrid, España</span>
-          </li>
+          <!-- Opciones para ADMIN -->
+          <ng-container *ngIf="isAdmin()">
+            <li class="nav-item">
+              <a class="nav-link" routerLink="admin" [ngClass]="{active: menuOption == 'admin'}"
+                (click)="onOption('admin')">Administración</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" routerLink="metricas" [ngClass]="{active: menuOption == 'metricas'}"
+                (click)="onOption('metricas')">Métricas</a>
+            </li>
+          </ng-container>
         </ul>
-      </div>
-      <div class="col-md-4 col-sm-6 mb-4 mb-md-0">
-        <h5 class="footer-title">Horario de Atención</h5>
-        <ul class="footer-list">
-          <li><span>Lunes - Viernes:</span> 9:00 - 20:00</li>
-          <li><span>Sábados:</span> 9:00 - 18:00</li>
-          <li><span>Domingos:</span> Cerrado</li>
-        </ul>
-      </div>
-      <div class="col-md-4 col-sm-12">
-        <h5 class="footer-title">Síguenos</h5>
-        <div class="social-links">
-          <a href="#" class="social-link" aria-label="Facebook">
-            <i class="bi bi-facebook"></i>
-          </a>
-          <a href="#" class="social-link" aria-label="Instagram">
-            <i class="bi bi-instagram"></i>
-          </a>
-          <a href="#" class="social-link" aria-label="Twitter">
-            <i class="bi bi-twitter"></i>
-          </a>
+        <div class="d-flex align-items-center gap-2">
+          <span class="text-light me-2" *ngIf="currentUser$ | async as user">
+            {{ user.nombre }}
+          </span>
+          <button class="btn btn-outline-light" type="button" (click)="logout()"
+            *ngIf="authService.isAuthenticated() && !isInvitado()">Cerrar Sesión</button>
+          <button class="btn btn-outline-light" type="button" routerLink="login" *ngIf="isInvitado()">Login</button>
         </div>
       </div>
     </div>
-    <hr class="footer-divider">
-    <div class="row">
-      <div class="col-12 text-center">
-        <p class="footer-copyright">&copy; 2024 Barberia. Todos los derechos reservados.</p>
+  </nav>
+
+
+
+
+
+
+
+
+
+  <!-- Menú lateral deslizable desde la derecha -->
+  <div class="sidebar-overlay" [class.active]="isMenuOpen" (click)="closeMenu()" *ngIf="!isLoginPage"></div>
+  <div class="sidebar-menu" [class.active]="isMenuOpen" *ngIf="!isLoginPage">
+    <div class="sidebar-header">
+      <h3>Menú</h3>
+      <button class="close-btn" (click)="closeMenu()" aria-label="Cerrar menú">&times;</button>
+    </div>
+    <ul class="sidebar-nav">
+      <li class="sidebar-item" *ngIf="currentUser$ | async as user">
+        <div class="sidebar-user-info">
+          <strong>{{ user.nombre }}</strong>
+          <small>{{ user.rol | titlecase }}</small>
+        </div>
+      </li>
+
+      <!-- Opciones para USUARIO e INVITADO -->
+      <ng-container *ngIf="showClientOptions()">
+        <li class="sidebar-item">
+          <a class="sidebar-link" routerLink="home" (click)="onOption('home'); closeMenu()">Inicio</a>
+        </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link" routerLink="servicios" [ngClass]="{active: menuOption == 'servicios'}"
+            (click)="onOption('servicios'); closeMenu()">Servicios</a>
+        </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link" routerLink="acerca-de" [ngClass]="{active: menuOption == 'acerca-de'}"
+            (click)="onOption('acerca-de'); closeMenu()">Acerca de</a>
+        </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link" routerLink="galeria" [ngClass]="{active: menuOption == 'galeria'}"
+            (click)="onOption('galeria'); closeMenu()">Galeria</a>
+        </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link" routerLink="resenas" [ngClass]="{active: menuOption == 'resenas'}"
+            (click)="onOption('resenas'); closeMenu()">Reseñas</a>
+        </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link" routerLink="direccion" [ngClass]="{active: menuOption == 'direccion'}"
+            (click)="onOption('direccion'); closeMenu()">Dirección</a>
+        </li>
+      </ng-container>
+
+      <!-- Opciones para BARBERO -->
+      <ng-container *ngIf="isBarbero()">
+        <li class="sidebar-item">
+          <a class="sidebar-link" routerLink="barbero" [ngClass]="{active: menuOption == 'barbero'}"
+            (click)="onOption('barbero'); closeMenu()">Mis Reservas</a>
+        </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link" routerLink="resenas" [ngClass]="{active: menuOption == 'resenas'}"
+            (click)="onOption('resenas'); closeMenu()">Reseñas</a>
+        </li>
+      </ng-container>
+
+      <!-- Opciones para ADMIN -->
+      <ng-container *ngIf="isAdmin()">
+        <li class="sidebar-item">
+          <a class="sidebar-link" routerLink="admin" [ngClass]="{active: menuOption == 'admin'}"
+            (click)="onOption('admin'); closeMenu()">Administración</a>
+        </li>
+        <li class="sidebar-item">
+          <a class="sidebar-link" routerLink="metricas" [ngClass]="{active: menuOption == 'metricas'}"
+            (click)="onOption('metricas'); closeMenu()">Métricas</a>
+        </li>
+      </ng-container>
+
+      <!-- Cerrar Sesión para usuarios autenticados (no invitados) -->
+      <li class="sidebar-item" *ngIf="authService.isAuthenticated() && !isInvitado()">
+        <a class="sidebar-link" (click)="logout()">Cerrar Sesión</a>
+      </li>
+      <!-- Login para invitados -->
+      <li class="sidebar-item" *ngIf="isInvitado()">
+        <a class="sidebar-link" routerLink="login" (click)="closeMenu()">Login</a>
+      </li>
+    </ul>
+  </div>
+
+  <router-outlet></router-outlet>
+
+  <!-- Footer -->
+  <footer class="footer" *ngIf="!isLoginPage">
+    <div class="container">
+      <div class="row">
+        <div class="col-md-4 col-sm-6 mb-4 mb-md-0">
+          <h5 class="footer-title">Contacto</h5>
+          <ul class="footer-list">
+            <li>
+              <i class="bi bi-envelope"></i>
+              <span>infobarberia.com</span>
+            </li>
+            <li>
+              <i class="bi bi-telephone"></i>
+              <span>+34 123 456 789</span>
+            </li>
+            <li>
+              <i class="bi bi-geo-alt"></i>
+              <span>San Javier, Villa Don Oscar, Pasaje Ramiro Castro #949</span>
+            </li>
+          </ul>
+        </div>
+        <div class="col-md-4 col-sm-6 mb-4 mb-md-0">
+          <h5 class="footer-title">Horario de Atención</h5>
+          <ul class="footer-list">
+            <li><span>Lunes - Domingo:</span> 9:00 - 20:00</li>
+          </ul>
+        </div>
+        <div class="col-md-4 col-sm-12">
+          <h5 class="footer-title">Síguenos</h5>
+          <div class="social-links">
+            <a href="#" class="social-link" aria-label="Facebook">
+              <i class="bi bi-facebook"></i>
+            </a>
+            <a href="#" class="social-link" aria-label="Instagram">
+              <i class="bi bi-instagram"></i>
+            </a>
+            <a href="#" class="social-link" aria-label="Twitter">
+              <i class="bi bi-twitter"></i>
+            </a>
+          </div>
+        </div>
+      </div>
+      <hr class="footer-divider">
+      <div class="row">
+        <div class="col-12 text-center">
+          <p class="footer-copyright">&copy; 2024 Barberia. Todos los derechos reservados.</p>
+        </div>
       </div>
     </div>
-  </div>
-</footer>
+  </footer>
 
 </div>

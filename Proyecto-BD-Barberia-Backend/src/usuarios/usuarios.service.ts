@@ -1,81 +1,94 @@
 import { Injectable } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
+import * as oracledb from 'oracledb';
 
 @Injectable()
 export class UsuariosService {
-  constructor(private databaseService: DatabaseService) {}
+  constructor(private databaseService: DatabaseService) { }
 
   async findAll() {
-    const query = `
-      SELECT 
-        ID_CLIENTE as id, 
-        TRIM(CORREO) as email, 
-        TRIM(NOMBRE || ' ' || APELLIDOS) as nombre, 
-        CASE 
-          WHEN ES_ADMIN = 1 THEN 'admin'
-          WHEN ES_BARBERO = 1 THEN 'barbero'
-          ELSE 'usuario'
-        END as rol,
-        ES_ADMIN as esAdmin,
-        ES_BARBERO as esBarbero,
-        ACTIVO as activo
-      FROM LTEB_CLIENTE
-      WHERE CORREO IS NOT NULL
-      ORDER BY ID_CLIENTE DESC
-    `;
-    const usuarios = await this.databaseService.executeQuery(query);
-    
-    // Asegurar que los emails estén normalizados (trim adicional por si acaso)
+    const usuarios = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_CLIENTE(p_accion => :accion, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+
     return usuarios.map(usuario => ({
-      ...usuario,
-      email: usuario.email ? String(usuario.email).trim() : usuario.email
+      id: usuario.ID_CLIENTE,
+      email: usuario.CORREO ? String(usuario.CORREO).trim() : null,
+      nombre: (usuario.NOMBRE + ' ' + usuario.APELLIDOS).trim(),
+      rol: usuario.ES_ADMIN === 1 ? 'admin' : (usuario.ES_BARBERO === 1 ? 'barbero' : 'usuario'),
+      esAdmin: usuario.ES_ADMIN,
+      esBarbero: usuario.ES_BARBERO,
+      activo: usuario.ACTIVO
     }));
   }
 
   async findOne(id: number) {
-    const query = `
-      SELECT 
-        ID_CLIENTE as id, 
-        CORREO as email, 
-        NOMBRE || ' ' || APELLIDOS as nombre, 
-        CASE 
-          WHEN ES_ADMIN = 1 THEN 'admin'
-          WHEN ES_BARBERO = 1 THEN 'barbero'
-          ELSE 'usuario'
-        END as rol,
-        ES_ADMIN as esAdmin,
-        ES_BARBERO as esBarbero,
-        ACTIVO as activo
-      FROM LTEB_CLIENTE
-      WHERE ID_CLIENTE = :id
-    `;
-    const users = await this.databaseService.executeQuery(query, { id });
-    return users[0] || null;
+    const users = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_CLIENTE(p_accion => :accion, p_id_cliente => :id, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        id,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+
+    const usuario = users[0];
+
+    if (!usuario) return null;
+
+    return {
+      id: usuario.ID_CLIENTE,
+      email: usuario.CORREO,
+      nombre: (usuario.NOMBRE + ' ' + usuario.APELLIDOS).trim(),
+      rol: usuario.ES_ADMIN === 1 ? 'admin' : (usuario.ES_BARBERO === 1 ? 'barbero' : 'usuario'),
+      esAdmin: usuario.ES_ADMIN,
+      esBarbero: usuario.ES_BARBERO,
+      activo: usuario.ACTIVO
+    };
   }
 
   async findByEmail(email: string) {
-    const query = `
-      SELECT 
-        ID_CLIENTE as id, 
-        CORREO as email, 
-        NOMBRE || ' ' || APELLIDOS as nombre, 
-        CASE 
-          WHEN ES_ADMIN = 1 THEN 'admin'
-          WHEN ES_BARBERO = 1 THEN 'barbero'
-          ELSE 'usuario'
-        END as rol,
-        ES_ADMIN as esAdmin,
-        ES_BARBERO as esBarbero,
-        ACTIVO as activo
-      FROM LTEB_CLIENTE
-      WHERE CORREO = :email
-    `;
-    const users = await this.databaseService.executeQuery(query, { email });
-    return users[0] || null;
+    const emailNormalizado = email ? String(email).trim() : '';
+
+    if (!emailNormalizado) return null;
+
+    const users = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_CLIENTE(p_accion => :accion, p_correo => :email, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        email: emailNormalizado,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+
+    const usuario = users[0];
+
+    if (!usuario) return null;
+
+    // Mapear al formato esperado
+    return {
+      id: usuario.ID_CLIENTE,
+      email: usuario.CORREO ? String(usuario.CORREO).trim() : null,
+      nombre: (usuario.NOMBRE + ' ' + usuario.APELLIDOS).trim(),
+      rol: usuario.ES_ADMIN === 1 ? 'admin' : (usuario.ES_BARBERO === 1 ? 'barbero' : 'usuario'),
+      esAdmin: usuario.ES_ADMIN,
+      esBarbero: usuario.ES_BARBERO,
+      activo: usuario.ACTIVO,
+      password: usuario.PASSWORD // Necesario para auth
+    };
   }
 
   async convertirClienteABarbero(clienteId: number, datosBarbero: {
-    rut?: number;
     telefono?: number;
     idDireccion?: number;
     idSucursal?: number;
@@ -97,11 +110,11 @@ export class UsuariosService {
     // Crear registro en LTEB_BARBERO vinculado al cliente
     const insertBarberoQuery = `
       INSERT INTO LTEB_BARBERO (
-        ID_BARBERO, ID_CLIENTE, RUT, CORREO, TELEFONO, 
+        ID_BARBERO, ID_CLIENTE, CORREO, TELEFONO, 
         APELLIDO_PATERNO, APELLIDO_MATERNO, ID_DIRECCION, ID_SUCURSAL
       )
       VALUES (
-        LTEB_BARBERO_SEQ.NEXTVAL, :clienteId, :rut, :correo, :telefono,
+        LTEB_BARBERO_SEQ.NEXTVAL, :clienteId, :correo, :telefono,
         :apellidoPaterno, :apellidoMaterno, :idDireccion, :idSucursal
       )
     `;
@@ -113,7 +126,6 @@ export class UsuariosService {
 
     await this.databaseService.executeInsert(insertBarberoQuery, {
       clienteId,
-      rut: datosBarbero.rut || null,
       correo: cliente.email,
       telefono: datosBarbero.telefono || null,
       apellidoPaterno,
@@ -145,4 +157,3 @@ export class UsuariosService {
     return { success: true, message: 'Permisos de administrador removidos' };
   }
 }
-

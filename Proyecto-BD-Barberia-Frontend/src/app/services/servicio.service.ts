@@ -8,7 +8,7 @@ import { Servicio } from '../models/servicio.model';
   providedIn: 'root'
 })
 export class ServicioService {
-  private apiUrl = 'http://localhost:3000';
+  private apiUrl = 'http://127.0.0.1:3000';
   private serviciosSubject = new BehaviorSubject<Servicio[]>([]);
   public servicios$ = this.serviciosSubject.asObservable();
 
@@ -82,16 +82,6 @@ export class ServicioService {
         tap(nuevoServicio => {
           const servicios = [...this.serviciosSubject.value, nuevoServicio];
           this.serviciosSubject.next(servicios);
-        }),
-        catchError(() => {
-          // Fallback local
-          const nuevoId = this.servicios.length > 0 
-            ? Math.max(...this.servicios.map(s => s.id)) + 1 
-            : 1;
-          const nuevoServicio: Servicio = { ...servicio, id: nuevoId };
-          this.servicios.push(nuevoServicio);
-          this.serviciosSubject.next([...this.servicios]);
-          return of(nuevoServicio);
         })
       );
   }
@@ -100,7 +90,7 @@ export class ServicioService {
     return this.http.patch<Servicio>(`${this.apiUrl}/servicios/${id}`, servicio)
       .pipe(
         tap(servicioActualizado => {
-          const servicios = this.serviciosSubject.value.map(s => 
+          const servicios = this.serviciosSubject.value.map(s =>
             s.id === id ? servicioActualizado : s
           );
           this.serviciosSubject.next(servicios);

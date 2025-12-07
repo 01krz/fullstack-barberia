@@ -7,7 +7,7 @@ import { User, UserRole, LoginCredentials } from '../models/user.model';
   providedIn: 'root'
 })
 export class AuthService {
-  private apiUrl = 'http://localhost:3000';
+  public apiUrl = 'http://127.0.0.1:3000';
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
 
@@ -41,7 +41,7 @@ export class AuthService {
     if (typeof window !== 'undefined' && window.localStorage) {
       const token = localStorage.getItem('access_token');
       const userStr = localStorage.getItem('currentUser');
-      
+
       // Si hay usuario pero NO hay token, limpiar todo (sesión inválida)
       if (userStr && !token) {
         console.warn('⚠️ Usuario encontrado pero sin token. Limpiando sesión inválida.');
@@ -73,7 +73,7 @@ export class AuthService {
               tokenLength: response.access_token?.length,
               user: response.user
             });
-            
+
             // Guardar token y usuario (solo en el navegador)
             if (typeof window !== 'undefined' && window.localStorage) {
               if (response.access_token) {
@@ -82,7 +82,7 @@ export class AuthService {
               } else {
                 console.error('❌ No se recibió access_token en la respuesta');
               }
-              
+
               if (response.user) {
                 localStorage.setItem('currentUser', JSON.stringify(response.user));
                 console.log('✅ Usuario guardado en localStorage');
@@ -90,7 +90,7 @@ export class AuthService {
                 console.error('❌ No se recibió user en la respuesta');
               }
             }
-            
+
             this.currentUserSubject.next(response.user as User);
             observer.next(true);
             observer.complete();
@@ -100,7 +100,7 @@ export class AuthService {
           error: (error) => {
             console.error('❌ Error en login con backend:', error);
             console.error('⚠️ NO se usará fallback de usuarios simulados porque no tienen token JWT');
-            
+
             // NO usar fallback porque no tiene token JWT válido
             // El usuario debe autenticarse correctamente con el backend
             observer.next(false);
@@ -147,20 +147,20 @@ export class AuthService {
 
   isAuthenticated(): boolean {
     const user = this.currentUserSubject.value;
-    const token = typeof window !== 'undefined' && window.localStorage 
-      ? localStorage.getItem('access_token') 
+    const token = typeof window !== 'undefined' && window.localStorage
+      ? localStorage.getItem('access_token')
       : null;
-    
+
     // Verificar que tanto el usuario como el token existan
     const isAuth = user !== null && token !== null;
-    
+
     if (!isAuth && user) {
-      console.warn('⚠️ Usuario existe pero no hay token. Puede necesitar re-autenticarse.');
+      // console.warn('⚠️ Usuario existe pero no hay token. Puede necesitar re-autenticarse.');
     }
-    
+
     return isAuth;
   }
-  
+
   // Método para obtener el token de autenticación
   getAuthToken(): string | null {
     if (typeof window !== 'undefined' && window.localStorage) {
@@ -269,77 +269,34 @@ export class AuthService {
 
   // Obtener usuario por email (desde el backend)
   obtenerUsuarioPorEmail(email: string): Observable<User | null> {
-    const token = typeof window !== 'undefined' && window.localStorage 
-      ? localStorage.getItem('access_token') 
+    const token = typeof window !== 'undefined' && window.localStorage
+      ? localStorage.getItem('access_token')
       : null;
-    
-    // Verificar también el usuario actual
-    const currentUser = typeof window !== 'undefined' && window.localStorage
-      ? localStorage.getItem('currentUser')
-      : null;
-    
-    console.log('🔑 Estado de autenticación:', {
-      tokenExiste: !!token,
-      tokenLength: token?.length,
-      tokenPreview: token ? token.substring(0, 20) + '...' : 'null',
-      currentUser: currentUser ? JSON.parse(currentUser) : null
-    });
-    
+
     const headers: any = {
       'Content-Type': 'application/json'
     };
-    
+
     if (token) {
       headers['Authorization'] = `Bearer ${token}`;
-      console.log('✅ Token agregado al header Authorization');
     } else {
       console.error('❌ No hay token de autenticación. El usuario debe iniciar sesión nuevamente.');
-      console.log('💡 Solución: Cierra sesión y vuelve a iniciar sesión.');
     }
 
-    console.log('🔍 Buscando usuario por email:', email);
-    console.log('📤 Headers enviados:', { ...headers, Authorization: headers['Authorization'] ? 'Bearer ***' : 'No hay' });
+    // Normalizar el email antes de enviarlo (trim y luego codificar para URL)
+    const emailLimpio = email.trim();
+    const emailNormalizado = encodeURIComponent(emailLimpio);
 
-    return this.http.get<User[]>(`${this.apiUrl}/usuarios`, { headers }).pipe(
-      map(usuarios => {
-        console.log('✅ Usuarios recibidos del backend:', usuarios.length);
-        console.log('📋 Primeros 3 usuarios (muestra):', usuarios.slice(0, 3).map(u => ({
-          id: u.id,
-          email: u.email,
-          emailType: typeof u.email,
-          emailLength: u.email?.length,
-          emailTrimmed: u.email?.trim()
-        })));
-        
-        // Normalizar el email buscado
-        const emailBuscado = email.trim().toLowerCase();
-        console.log('🔍 Email buscado (normalizado):', emailBuscado);
-        
-        // Buscar usuario con comparación más robusta
-        const usuario = usuarios.find(u => {
-          if (!u.email) return false;
-          
-          // Normalizar email de la BD (trim + lowercase)
-          const emailBD = String(u.email).trim().toLowerCase();
-          const match = emailBD === emailBuscado;
-          
-          if (!match) {
-            // Log detallado para el primer usuario que no coincide (solo para debug)
-            if (usuarios.indexOf(u) === 0) {
-              console.log('🔍 Comparación detallada:', {
-                emailBuscado: emailBuscado,
-                emailBD: emailBD,
-                emailOriginal: u.email,
-                match: match,
-                emailBuscadoLength: emailBuscado.length,
-                emailBDLength: emailBD.length
-              });
-            }
-          }
-          
-          return match;
-        });
-        
+    console.log('🔍 Buscando usuario por email:', {
+      emailOriginal: email,
+      emailLimpio: emailLimpio,
+      emailCodificado: emailNormalizado,
+      url: `${this.apiUrl}/usuarios/email/${emailNormalizado}`
+    });
+
+    // Usar el endpoint específico para buscar por email
+    return this.http.get<User>(`${this.apiUrl}/usuarios/email/${emailNormalizado}`, { headers }).pipe(
+      map(usuario => {
         if (usuario) {
           console.log('✅ Usuario encontrado:', {
             id: usuario.id,
@@ -347,36 +304,25 @@ export class AuthService {
             nombre: usuario.nombre,
             rol: usuario.rol
           });
-        } else {
-          console.log('❌ Usuario no encontrado. Emails en BD:', usuarios.map(u => ({
-            original: u.email,
-            trimmed: u.email?.trim(),
-            lowercased: u.email?.trim().toLowerCase()
-          })));
+          return usuario;
         }
-        return usuario || null;
+        return null;
       }),
       catchError((error) => {
         console.error('❌ Error al buscar usuario:', error);
-        console.error('Error completo:', {
-          status: error.status,
-          statusText: error.statusText,
-          message: error.message,
-          error: error.error
-        });
-        
+
+        // Si es 404, el usuario no existe (esto es normal)
+        if (error.status === 404) {
+          console.log('ℹ️ Usuario no encontrado en la base de datos');
+          return of(null);
+        }
+
         // Si es error 401 (no autorizado), el token puede estar expirado
         if (error.status === 401) {
           console.error('⚠️ Error 401: Token inválido o expirado. El usuario debe iniciar sesión nuevamente.');
         }
-        
-        // Fallback a usuarios locales
-        const usuario = this.users.find(u => u.email.toLowerCase() === email.toLowerCase());
-        if (usuario) {
-          console.log('⚠️ Usando usuario local como fallback');
-          const { password, ...usuarioSinPassword } = usuario;
-          return of(usuarioSinPassword as User);
-        }
+
+        // Para otros errores, retornar null
         return of(null);
       })
     );

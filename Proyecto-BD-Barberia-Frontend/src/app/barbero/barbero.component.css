@@ -66,10 +66,7 @@
     color: #fff;
 }
 
-.estado-completada {
-    background-color: #17a2b8;
-    color: #fff;
-}
+/* .estado-completada moved to end of file */
 
 .estado-cancelada {
     background-color: #dc3545;
@@ -608,3 +605,26 @@
     }
 }
 
+
+.slot-hora.completada {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+    opacity: 0.9;
+}
+
+.slot-hora.completada:hover {
+    background-color: #f5c6cb;
+    border-color: #c82333;
+    transform: scale(1.02);
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.3);
+}
+
+.estado-completada {
+    background-color: #dc3545;
+    color: #fff;
+}
+
+.leyenda-color.completada {
+    background-color: #f8d7da;
+    border-color: #dc3545;
+}

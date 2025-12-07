@@ -17,6 +17,24 @@ export class UsuariosController {
     return this.usuariosService.findAll();
   }
 
+  @Get('email/:email')
+  findByEmail(@Param('email') email: string) {
+    // Decodificar el email que viene en la URL (NestJS lo decodifica automáticamente, pero por si acaso)
+    try {
+      const emailDecodificado = decodeURIComponent(email);
+      console.log('📧 Email recibido en controlador:', {
+        original: email,
+        decodificado: emailDecodificado,
+        length: emailDecodificado.length
+      });
+      return this.usuariosService.findByEmail(emailDecodificado);
+    } catch (error) {
+      // Si falla la decodificación, usar el email tal como viene
+      console.warn('⚠️ Error al decodificar email, usando email original:', email);
+      return this.usuariosService.findByEmail(email);
+    }
+  }
+
   @Get(':id')
   findOne(@Param('id') id: string) {
     return this.usuariosService.findOne(+id);

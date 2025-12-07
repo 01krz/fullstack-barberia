@@ -2,10 +2,16 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { DatabaseService } from '../database/database.service';
 import { CreateReservaDto } from './dto/create-reserva.dto';
 import { UpdateReservaDto } from './dto/update-reserva.dto';
+import * as oracledb from 'oracledb';
+
+import { ProductosService } from '../productos/productos.service';
 
 @Injectable()
 export class ReservasService {
-  constructor(private databaseService: DatabaseService) {}
+  constructor(
+    private databaseService: DatabaseService,
+    private productosService: ProductosService
+  ) { }
 
   async create(createReservaDto: CreateReservaDto) {
     const {
@@ -14,9 +20,8 @@ export class ReservasService {
       servicioId,
       fecha,
       hora,
-      estado = 'pendiente',
       notas,
-      productos = [],
+      productos
     } = createReservaDto;
 
     // Verificar disponibilidad
@@ -29,159 +34,137 @@ export class ReservasService {
       throw new BadRequestException('La hora seleccionada no está disponible');
     }
 
-    const query = `
-      INSERT INTO LTEB_CITA (
-        ID_CITA, ID_CLIENTE, ID_BARBERO, ID_SERVICIO, FECHA, HORA_INICIO, ESTADO
-      )
-      VALUES (
-        :id, :clienteId, :barberoId, :servicioId, 
-        TO_DATE(:fecha, 'YYYY-MM-DD'), :hora, :estado
-      )
-    `;
+    // Sanitize inputs
+    const fechaStr = (fecha as any) instanceof Date ? (fecha as any).toISOString().split('T')[0] : (fecha as any).split('T')[0];
+    const horaStr = hora;
 
     try {
-      // Insertar la cita y obtener el ID
-      const reservaId = await this.databaseService.executeInsertWithId(
-        query,
+      const rows = await this.databaseService.executeCursorProcedure(
+        'BEGIN SP_GESTIONAR_CITA(p_accion => :accion, p_id_cliente => :clienteId, p_id_servicio => :servicioId, p_id_barbero => :barberoId, p_fecha => TO_DATE(:fecha, \'YYYY-MM-DD\'), p_hora => :hora, p_comentario => :comentario, p_cursor => :cursor, p_id_salida => :id_salida); END;',
         {
+          accion: 'C',
           clienteId,
-          barberoId,
           servicioId,
-          fecha,
-          hora,
-          estado,
+          barberoId,
+          fecha: fechaStr,
+          hora: horaStr,
+          comentario: notas || '',
+          cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+          id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
         },
-        'LTEB_CITA_SEQ',
+        'cursor'
       );
 
-      // Nota: No hay tabla reserva_productos en la BD real
-      // Los productos se manejan a través de LTEB_VENTA y LTEB_DETALLE_VENTA
+      // Actualizar stock de productos si los hay
+      if (productos && productos.length > 0) {
+        for (const productoId of productos) {
+          await this.productosService.updateStock(productoId, -1);
+        }
+      }
 
-      // Obtener la reserva creada con información relacionada
-      return await this.findOne(reservaId);
+      return this.mapReservas(rows)[0];
     } catch (error) {
       console.error('Error al crear reserva:', error);
-      throw new Error('Error al crear la reserva');
+      throw new Error(`Error al crear la reserva: ${error.message}`);
     }
   }
 
   async findAll() {
-    const query = `
-      SELECT 
-        c.ID_CITA as id,
-        c.ID_CLIENTE as clienteId,
-        cl.NOMBRE || ' ' || cl.APELLIDOS as cliente,
-        c.ID_BARBERO as barberoId,
-        b.APELLIDO_PATERNO || ' ' || b.APELLIDO_MATERNO as barbero,
-        s.NOMBRE as servicio,
-        TO_CHAR(c.FECHA, 'YYYY-MM-DD') as fecha,
-        c.HORA_INICIO as hora,
-        c.ESTADO as estado
-      FROM LTEB_CITA c
-      INNER JOIN LTEB_CLIENTE cl ON c.ID_CLIENTE = cl.ID_CLIENTE
-      INNER JOIN LTEB_BARBERO b ON c.ID_BARBERO = b.ID_BARBERO
-      INNER JOIN LTEB_SERVICIO s ON c.ID_SERVICIO = s.ID_SERVICIO
-      ORDER BY c.FECHA DESC, c.HORA_INICIO DESC
-    `;
-    return await this.databaseService.executeQuery(query);
+    const reservas = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_CITA(p_accion => :accion, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+    return this.mapReservas(reservas);
   }
 
   async findByBarbero(barberoId: number) {
-    const query = `
-      SELECT 
-        c.ID_CITA as id,
-        c.ID_CLIENTE as clienteId,
-        cl.NOMBRE || ' ' || cl.APELLIDOS as cliente,
-        c.ID_BARBERO as barberoId,
-        b.APELLIDO_PATERNO || ' ' || b.APELLIDO_MATERNO as barbero,
-        s.NOMBRE as servicio,
-        TO_CHAR(c.FECHA, 'YYYY-MM-DD') as fecha,
-        c.HORA_INICIO as hora,
-        c.ESTADO as estado
-      FROM LTEB_CITA c
-      INNER JOIN LTEB_CLIENTE cl ON c.ID_CLIENTE = cl.ID_CLIENTE
-      INNER JOIN LTEB_BARBERO b ON c.ID_BARBERO = b.ID_BARBERO
-      INNER JOIN LTEB_SERVICIO s ON c.ID_SERVICIO = s.ID_SERVICIO
-      WHERE c.ID_BARBERO = :barberoId
-      ORDER BY c.FECHA DESC, c.HORA_INICIO DESC
-    `;
-    return await this.databaseService.executeQuery(query, { barberoId });
+    const reservas = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_CITA(p_accion => :accion, p_id_barbero => :barberoId, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        barberoId,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+    return this.mapReservas(reservas);
   }
 
   async findByCliente(clienteId: number) {
-    const query = `
-      SELECT 
-        c.ID_CITA as id,
-        c.ID_CLIENTE as clienteId,
-        cl.NOMBRE || ' ' || cl.APELLIDOS as cliente,
-        c.ID_BARBERO as barberoId,
-        b.APELLIDO_PATERNO || ' ' || b.APELLIDO_MATERNO as barbero,
-        s.NOMBRE as servicio,
-        TO_CHAR(c.FECHA, 'YYYY-MM-DD') as fecha,
-        c.HORA_INICIO as hora,
-        c.ESTADO as estado
-      FROM LTEB_CITA c
-      INNER JOIN LTEB_CLIENTE cl ON c.ID_CLIENTE = cl.ID_CLIENTE
-      INNER JOIN LTEB_BARBERO b ON c.ID_BARBERO = b.ID_BARBERO
-      INNER JOIN LTEB_SERVICIO s ON c.ID_SERVICIO = s.ID_SERVICIO
-      WHERE c.ID_CLIENTE = :clienteId
-      ORDER BY c.FECHA DESC, c.HORA_INICIO DESC
-    `;
-    return await this.databaseService.executeQuery(query, { clienteId });
+    const reservas = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_CITA(p_accion => :accion, p_id_cliente => :clienteId, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        clienteId,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+    return this.mapReservas(reservas);
   }
 
   async findOne(id: number) {
-    const query = `
-      SELECT 
-        c.ID_CITA as id,
-        c.ID_CLIENTE as clienteId,
-        cl.NOMBRE || ' ' || cl.APELLIDOS as cliente,
-        c.ID_BARBERO as barberoId,
-        b.APELLIDO_PATERNO || ' ' || b.APELLIDO_MATERNO as barbero,
-        s.NOMBRE as servicio,
-        TO_CHAR(c.FECHA, 'YYYY-MM-DD') as fecha,
-        c.HORA_INICIO as hora,
-        c.ESTADO as estado
-      FROM LTEB_CITA c
-      INNER JOIN LTEB_CLIENTE cl ON c.ID_CLIENTE = cl.ID_CLIENTE
-      INNER JOIN LTEB_BARBERO b ON c.ID_BARBERO = b.ID_BARBERO
-      INNER JOIN LTEB_SERVICIO s ON c.ID_SERVICIO = s.ID_SERVICIO
-      WHERE c.ID_CITA = :id
-    `;
-    const reservas = await this.databaseService.executeQuery(query, { id });
-    return reservas[0] || null;
+    const reservas = await this.databaseService.executeCursorProcedure(
+      'BEGIN SP_GESTIONAR_CITA(p_accion => :accion, p_id_cita => :id, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'R',
+        id,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      },
+      'cursor'
+    );
+
+    if (reservas.length === 0) return null;
+    const r = reservas[0];
+    return {
+      id: r.ID_CITA,
+      clienteId: r.ID_CLIENTE,
+      cliente: r.CLIENTE_NOMBRE_COMPLETO || r.CLIENTE || 'Desconocido',
+      barberoId: r.ID_BARBERO,
+      barbero: r.BARBERO_NOMBRE || r.BARBERO || 'Desconocido',
+      servicioId: r.ID_SERVICIO,
+      servicio: r.SERVICIO_NOMBRE || r.SERVICIO || 'Desconocido',
+      fecha: r.FECHA instanceof Date ? r.FECHA.toISOString().split('T')[0] : r.FECHA,
+      hora: r.HORA_INICIO,
+      estado: r.ESTADO,
+      notas: r.COMENTARIO
+    };
   }
 
   async update(id: number, updateReservaDto: UpdateReservaDto) {
-    const fields = [];
-    const binds: any = { id };
-
-    if (updateReservaDto.estado !== undefined) {
-      fields.push('ESTADO = :estado');
-      binds.estado = updateReservaDto.estado;
-    }
-
-    if (fields.length === 0) {
-      return this.findOne(id);
-    }
-
-    const query = `
-      UPDATE LTEB_CITA
-      SET ${fields.join(', ')}
-      WHERE ID_CITA = :id
-    `;
-
-    await this.databaseService.executeUpdate(query, binds);
+    const { estado, notas } = updateReservaDto;
+    await this.databaseService.executeProcedure(
+      'BEGIN SP_GESTIONAR_CITA(p_accion => :accion, p_id_cita => :id, p_estado => :estado, p_comentario => :comentario, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'U',
+        id,
+        estado,
+        comentario: notas,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      }
+    );
     return this.findOne(id);
   }
 
   async remove(id: number) {
-    const query = `
-      UPDATE LTEB_CITA
-      SET ESTADO = 'cancelada'
-      WHERE ID_CITA = :id
-    `;
-    await this.databaseService.executeUpdate(query, { id });
+    await this.databaseService.executeProcedure(
+      'BEGIN SP_GESTIONAR_CITA(p_accion => :accion, p_id_cita => :id, p_cursor => :cursor, p_id_salida => :id_salida); END;',
+      {
+        accion: 'D',
+        id,
+        cursor: { dir: oracledb.BIND_OUT, type: oracledb.CURSOR },
+        id_salida: { dir: oracledb.BIND_OUT, type: oracledb.NUMBER }
+      }
+    );
     return { message: 'Cita cancelada correctamente' };
   }
 
@@ -190,7 +173,6 @@ export class ReservasService {
     fecha: string,
     hora: string,
   ): Promise<boolean> {
-    // Verificar si hay una cita activa en esa fecha y hora
     const reservaQuery = `
       SELECT ID_CITA FROM LTEB_CITA
       WHERE ID_BARBERO = :barberoId
@@ -206,5 +188,37 @@ export class ReservasService {
 
     return reservas.length === 0;
   }
-}
 
+  private mapReservas(rows: any[]) {
+    if (rows.length > 0) {
+      const debugInfo = {
+        keys: Object.keys(rows[0]),
+        firstRow: rows[0]
+      };
+      // Write to file for debugging
+      const fs = require('fs');
+      fs.writeFileSync('backend_debug.log', JSON.stringify(debugInfo, null, 2));
+
+      console.log('DEBUG: Keys of first row:', Object.keys(rows[0]));
+      console.log('DEBUG: First row sample:', JSON.stringify(rows[0], null, 2));
+    }
+    return rows.map(r => {
+      // Intentar obtener el nombre del cliente de varias formas posibles
+      const clienteNombre = r.CLIENTE_NOMBRE_COMPLETO || r.CLIENTE || r.CLIENTE_NOMBRE || r.NOMBRE_CLIENTE ||
+        (r.NOMBRE ? r.NOMBRE + (r.APELLIDOS ? ' ' + r.APELLIDOS : '') : 'Desconocido');
+
+      return {
+        id: r.ID_CITA,
+        clienteId: r.ID_CLIENTE,
+        cliente: clienteNombre,
+        barberoId: r.ID_BARBERO,
+        barbero: r.BARBERO_NOMBRE || r.BARBERO || (r.NOMBRE_COMPLETO ? r.NOMBRE_COMPLETO : 'Desconocido'),
+        servicio: r.SERVICIO_NOMBRE || r.SERVICIO || r.NOMBRE_SERVICIO,
+        fecha: r.FECHA instanceof Date ? r.FECHA.toISOString().split('T')[0] : r.FECHA,
+        hora: r.HORA_INICIO,
+        estado: r.ESTADO,
+        notas: r.COMENTARIO
+      };
+    });
+  }
+}
